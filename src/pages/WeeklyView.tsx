@@ -5,6 +5,7 @@ import { AddExpenseModal } from '../components/expenses/AddExpenseModal';
 import { AddExpenseButton } from '../components/expenses/AddExpenseButton';
 import { ExpenseItem } from '../components/expenses/ExpenseItem';
 import { useWeekExpenses, useExpenseActions } from '../hooks/useExpenses';
+import { useTags } from '../hooks/useTags';
 import { formatCurrency } from '../utils/formatters';
 import {
   getWeekStart,
@@ -24,8 +25,9 @@ export function WeeklyView() {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const weekStart = useMemo(() => getWeekStart(currentDate), [currentDate]);
-  const { groupedByDate, total, loading } = useWeekExpenses(weekStart);
+  const { groupedByDate, total, loading, expenses } = useWeekExpenses(weekStart);
   const { add, remove } = useExpenseActions();
+  const { tags } = useTags();
 
   const days = useMemo(() => getDaysInWeek(weekStart), [weekStart]);
 
@@ -45,7 +47,12 @@ export function WeeklyView() {
 
       <main className="p-4 space-y-4">
         {/* Budget Indicator */}
-        <BudgetIndicator spent={total} />
+        <BudgetIndicator
+          spent={total}
+          expenses={expenses}
+          tags={tags}
+          showTagBreakdown
+        />
 
         {/* Week Total */}
         <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">

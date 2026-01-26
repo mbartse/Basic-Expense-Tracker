@@ -22,7 +22,7 @@ export async function addExpense(input: ExpenseInput): Promise<string> {
   const date = input.date || new Date();
   const now = Timestamp.now();
 
-  const expenseData = {
+  const expenseData: Record<string, unknown> = {
     amount: input.amount,
     name: input.name.trim(),
     date: Timestamp.fromDate(date),
@@ -31,6 +31,11 @@ export async function addExpense(input: ExpenseInput): Promise<string> {
     monthKey: getMonthKey(date),
     createdAt: now,
   };
+
+  // Only add tagIds if provided and not empty
+  if (input.tagIds && input.tagIds.length > 0) {
+    expenseData.tagIds = input.tagIds;
+  }
 
   const docRef = await addDoc(collection(db, EXPENSES_COLLECTION), expenseData);
   return docRef.id;
@@ -57,6 +62,9 @@ export async function updateExpense(
     updates.dateString = getDateString(input.date);
     updates.weekKey = getWeekKey(input.date);
     updates.monthKey = getMonthKey(input.date);
+  }
+  if (input.tagIds !== undefined) {
+    updates.tagIds = input.tagIds.length > 0 ? input.tagIds : [];
   }
 
   await updateDoc(docRef, updates);

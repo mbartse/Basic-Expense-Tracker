@@ -11,7 +11,9 @@
       "Bash(cat:*)",
       "Bash(firebase deploy:*)",
       "Bash(firebase hosting:sites:create:*)",
-      "Bash(dir:*)"
+      "Bash(dir:*)",
+      "Bash(timeout:*)",
+      "Bash(npx firebase deploy --only firestore:rules)"
     ]
   }
 }
