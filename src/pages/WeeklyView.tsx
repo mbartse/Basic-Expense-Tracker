@@ -1,11 +1,12 @@
 import { useState, useMemo } from 'react';
+import { Tag } from 'lucide-react';
 import { DateNavigator } from '../components/navigation/DateNavigator';
 import { BudgetIndicator } from '../components/summaries/BudgetIndicator';
 import { AddExpenseModal } from '../components/expenses/AddExpenseModal';
 import { AddExpenseButton } from '../components/expenses/AddExpenseButton';
 import { ExpenseItem } from '../components/expenses/ExpenseItem';
 import { useWeekExpenses, useExpenseActions } from '../hooks/useExpenses';
-import { useTags } from '../hooks/useTags';
+import { useBanks } from '../hooks/useBanks';
 import { formatCurrency } from '../utils/formatters';
 import {
   getWeekStart,
@@ -23,11 +24,12 @@ import { calculateTotal } from '../services/expenseService';
 export function WeeklyView() {
   const [currentDate, setCurrentDate] = useState(() => new Date());
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [showBanks, setShowBanks] = useState(false);
 
   const weekStart = useMemo(() => getWeekStart(currentDate), [currentDate]);
   const { groupedByDate, total, loading, expenses } = useWeekExpenses(weekStart);
   const { add, remove } = useExpenseActions();
-  const { tags } = useTags();
+  const { banks } = useBanks();
 
   const days = useMemo(() => getDaysInWeek(weekStart), [weekStart]);
 
@@ -50,17 +52,30 @@ export function WeeklyView() {
         <BudgetIndicator
           spent={total}
           expenses={expenses}
-          tags={tags}
-          showTagBreakdown
+          banks={banks}
+          showBankBreakdown
         />
 
         {/* Week Total */}
         <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
           <div className="flex justify-between items-center">
             <span className="text-gray-400">Week Total</span>
-            <span className="text-2xl font-bold text-gray-100">
-              {formatCurrency(total)}
-            </span>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setShowBanks(!showBanks)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 text-sm border rounded-lg transition-colors ${
+                  showBanks
+                    ? 'text-blue-400 bg-blue-900/30 border-blue-700'
+                    : 'text-gray-400 hover:text-gray-200 bg-gray-800 border-gray-700'
+                }`}
+              >
+                <Tag className="w-4 h-4" />
+                Banks
+              </button>
+              <span className="text-2xl font-bold text-gray-100">
+                {formatCurrency(total)}
+              </span>
+            </div>
           </div>
         </div>
 
@@ -123,6 +138,8 @@ export function WeeklyView() {
                                 expense={expense}
                                 compact
                                 onDelete={remove}
+                                showBanks={showBanks}
+                                banks={banks}
                               />
                             ))}
                           </div>

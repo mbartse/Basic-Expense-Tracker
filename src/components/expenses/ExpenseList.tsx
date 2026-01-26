@@ -1,4 +1,4 @@
-import type { Expense } from '../../types/expense';
+import type { Expense, Bank } from '../../types/expense';
 import { ExpenseItem } from './ExpenseItem';
 import { formatCurrency } from '../../utils/formatters';
 
@@ -7,6 +7,9 @@ interface ExpenseListProps {
   total: number;
   onDelete?: (id: string) => void;
   showTotal?: boolean;
+  showDate?: boolean;
+  showBanks?: boolean;
+  banks?: Bank[];
   emptyMessage?: string;
 }
 
@@ -15,6 +18,9 @@ export function ExpenseList({
   total,
   onDelete,
   showTotal = true,
+  showDate = false,
+  showBanks = false,
+  banks = [],
   emptyMessage = 'No expenses yet',
 }: ExpenseListProps) {
   if (expenses.length === 0) {
@@ -33,6 +39,10 @@ export function ExpenseList({
           key={expense.id}
           expense={expense}
           onDelete={onDelete}
+          showDate={showDate}
+          showTime={!showDate}
+          showBanks={showBanks}
+          banks={banks}
         />
       ))}
 

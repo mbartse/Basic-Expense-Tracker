@@ -16,6 +16,25 @@ import { getDateString, getWeekKey, getMonthKey } from '../utils/dateUtils';
 const EXPENSES_COLLECTION = 'expenses';
 
 /**
+ * Map Firestore document data to Expense type
+ * Handles tagIds -> bankIds field mapping for backward compatibility
+ */
+function mapDocToExpense(doc: { id: string; data: () => Record<string, unknown> }): Expense {
+  const data = doc.data();
+  return {
+    id: doc.id,
+    amount: data.amount as number,
+    name: data.name as string,
+    date: data.date as import('firebase/firestore').Timestamp,
+    dateString: data.dateString as string,
+    weekKey: data.weekKey as string,
+    monthKey: data.monthKey as string,
+    createdAt: data.createdAt as import('firebase/firestore').Timestamp,
+    bankIds: data.tagIds as string[] | undefined,
+  };
+}
+
+/**
  * Add a new expense
  */
 export async function addExpense(input: ExpenseInput): Promise<string> {
@@ -32,9 +51,9 @@ export async function addExpense(input: ExpenseInput): Promise<string> {
     createdAt: now,
   };
 
-  // Only add tagIds if provided and not empty
-  if (input.tagIds && input.tagIds.length > 0) {
-    expenseData.tagIds = input.tagIds;
+  // Only add bankIds if provided and not empty (stored as tagIds in Firestore for compatibility)
+  if (input.bankIds && input.bankIds.length > 0) {
+    expenseData.tagIds = input.bankIds;
   }
 
   const docRef = await addDoc(collection(db, EXPENSES_COLLECTION), expenseData);
@@ -63,8 +82,8 @@ export async function updateExpense(
     updates.weekKey = getWeekKey(input.date);
     updates.monthKey = getMonthKey(input.date);
   }
-  if (input.tagIds !== undefined) {
-    updates.tagIds = input.tagIds.length > 0 ? input.tagIds : [];
+  if (input.bankIds !== undefined) {
+    updates.tagIds = input.bankIds.length > 0 ? input.bankIds : [];
   }
 
   await updateDoc(docRef, updates);
@@ -90,10 +109,7 @@ export function subscribeToDateExpenses(
   );
 
   return onSnapshot(q, (snapshot) => {
-    const expenses = snapshot.docs.map((doc) => ({
-      id: doc.id,
-      ...doc.data(),
-    })) as Expense[];
+    const expenses = snapshot.docs.map(mapDocToExpense);
     // Sort client-side to avoid composite index requirement
     expenses.sort((a, b) => b.createdAt.toMillis() - a.createdAt.toMillis());
     callback(expenses);
@@ -113,10 +129,7 @@ export function subscribeToWeekExpenses(
   );
 
   return onSnapshot(q, (snapshot) => {
-    const expenses = snapshot.docs.map((doc) => ({
-      id: doc.id,
-      ...doc.data(),
-    })) as Expense[];
+    const expenses = snapshot.docs.map(mapDocToExpense);
     // Sort client-side
     expenses.sort((a, b) => {
       if (a.dateString !== b.dateString) {
@@ -141,10 +154,34 @@ export function subscribeToMonthExpenses(
   );
 
   return onSnapshot(q, (snapshot) => {
-    const expenses = snapshot.docs.map((doc) => ({
-      id: doc.id,
-      ...doc.data(),
-    })) as Expense[];
+    const expenses = snapshot.docs.map(mapDocToExpense);
+    // Sort client-side
+    expenses.sort((a, b) => {
+      if (a.dateString !== b.dateString) {
+        return a.dateString.localeCompare(b.dateString);
+      }
+      return b.createdAt.toMillis() - a.createdAt.toMillis();
+    });
+    callback(expenses);
+  });
+}
+
+/**
+ * Subscribe to expenses within a date range
+ */
+export function subscribeToDateRangeExpenses(
+  startDateString: string,
+  endDateString: string,
+  callback: (expenses: Expense[]) => void
+): () => void {
+  const q = query(
+    collection(db, EXPENSES_COLLECTION),
+    where('dateString', '>=', startDateString),
+    where('dateString', '<=', endDateString)
+  );
+
+  return onSnapshot(q, (snapshot) => {
+    const expenses = snapshot.docs.map(mapDocToExpense);
     // Sort client-side
     expenses.sort((a, b) => {
       if (a.dateString !== b.dateString) {

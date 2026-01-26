@@ -4,9 +4,9 @@ import { DateNavigator } from '../components/navigation/DateNavigator';
 import { AddExpenseModal } from '../components/expenses/AddExpenseModal';
 import { AddExpenseButton } from '../components/expenses/AddExpenseButton';
 import { useMonthExpenses, useExpenseActions } from '../hooks/useExpenses';
-import { useTags } from '../hooks/useTags';
+import { useBanks } from '../hooks/useBanks';
 import { formatCurrency } from '../utils/formatters';
-import { getTagHexColor } from '../services/tagService';
+import { getBankHexColor } from '../services/bankService';
 import {
   getMonthStart,
   getDaysInMonth,
@@ -24,12 +24,12 @@ import { WEEKLY_BUDGET } from '../constants/config';
 export function MonthlyView() {
   const [currentDate, setCurrentDate] = useState(() => new Date());
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isTagBreakdownExpanded, setIsTagBreakdownExpanded] = useState(false);
+  const [isBankBreakdownExpanded, setIsBankBreakdownExpanded] = useState(false);
 
   const monthStart = useMemo(() => getMonthStart(currentDate), [currentDate]);
   const { groupedByDate, total, loading, expenses } = useMonthExpenses(monthStart);
   const { add } = useExpenseActions();
-  const { tags } = useTags();
+  const { banks } = useBanks();
 
   const days = useMemo(() => getDaysInMonth(monthStart), [monthStart]);
 
@@ -50,41 +50,41 @@ export function MonthlyView() {
     return [...new Set(days.map((day) => getWeekKey(day)))];
   }, [days]);
 
-  // Calculate tag totals for the month
-  const tagTotals = useMemo(() => {
+  // Calculate bank totals for the month
+  const bankTotals = useMemo(() => {
     if (expenses.length === 0) return [];
 
-    const tagsMap = new Map(tags.map(t => [t.id, t]));
+    const banksMap = new Map(banks.map(b => [b.id, b]));
     const totals = new Map<string | null, number>();
 
     expenses.forEach(expense => {
-      if (expense.tagIds && expense.tagIds.length > 0) {
-        const amountPerTag = expense.amount / expense.tagIds.length;
-        expense.tagIds.forEach(tagId => {
-          totals.set(tagId, (totals.get(tagId) || 0) + amountPerTag);
+      if (expense.bankIds && expense.bankIds.length > 0) {
+        const amountPerBank = expense.amount / expense.bankIds.length;
+        expense.bankIds.forEach(bankId => {
+          totals.set(bankId, (totals.get(bankId) || 0) + amountPerBank);
         });
       } else {
         totals.set(null, (totals.get(null) || 0) + expense.amount);
       }
     });
 
-    const result: { tagId: string | null; name: string; color: string; total: number }[] = [];
-    totals.forEach((tagTotal, tagId) => {
-      if (tagId === null) {
+    const result: { bankId: string | null; name: string; color: string; total: number }[] = [];
+    totals.forEach((bankTotal, bankId) => {
+      if (bankId === null) {
         result.push({
-          tagId: null,
-          name: 'Untagged',
+          bankId: null,
+          name: 'No Bank',
           color: 'gray-500',
-          total: Math.round(tagTotal),
+          total: Math.round(bankTotal),
         });
       } else {
-        const tag = tagsMap.get(tagId);
-        if (tag) {
+        const bank = banksMap.get(bankId);
+        if (bank) {
           result.push({
-            tagId,
-            name: tag.name,
-            color: tag.color,
-            total: Math.round(tagTotal),
+            bankId,
+            name: bank.name,
+            color: bank.color,
+            total: Math.round(bankTotal),
           });
         }
       }
@@ -92,7 +92,7 @@ export function MonthlyView() {
 
     result.sort((a, b) => b.total - a.total);
     return result;
-  }, [expenses, tags]);
+  }, [expenses, banks]);
 
   const handlePrevious = () => setCurrentDate(prev => getPreviousMonth(prev));
   const handleNext = () => setCurrentDate(prev => getNextMonth(prev));
@@ -117,7 +117,7 @@ export function MonthlyView() {
       />
 
       <main className="p-4 space-y-4">
-        {/* Month Total with Tag Breakdown */}
+        {/* Month Total with Bank Breakdown */}
         <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
           <div className="flex justify-between items-center">
             <span className="text-gray-400">Month Total</span>
@@ -126,38 +126,38 @@ export function MonthlyView() {
             </span>
           </div>
 
-          {/* Tag Breakdown */}
-          {tags.length > 0 && (
+          {/* Bank Breakdown */}
+          {banks.length > 0 && (
             <div className="mt-3 pt-3 border-t border-gray-700">
               <button
-                onClick={() => setIsTagBreakdownExpanded(!isTagBreakdownExpanded)}
+                onClick={() => setIsBankBreakdownExpanded(!isBankBreakdownExpanded)}
                 className="flex items-center gap-1 text-sm text-gray-400 hover:text-gray-200 transition-colors"
               >
-                {isTagBreakdownExpanded ? (
+                {isBankBreakdownExpanded ? (
                   <ChevronDown className="w-4 h-4" />
                 ) : (
                   <ChevronRight className="w-4 h-4" />
                 )}
-                View by tags
+                View by bank
               </button>
 
-              {isTagBreakdownExpanded && tagTotals.length > 0 && (
+              {isBankBreakdownExpanded && bankTotals.length > 0 && (
                 <>
                   <div className="mt-3 space-y-2">
-                    {tagTotals.map((tagTotal) => (
+                    {bankTotals.map((bankTotal) => (
                       <div
-                        key={tagTotal.tagId ?? 'untagged'}
+                        key={bankTotal.bankId ?? 'nobank'}
                         className="flex items-center justify-between"
                       >
                         <div className="flex items-center gap-2">
                           <div
                             className="w-2.5 h-2.5 rounded-full"
-                            style={{ backgroundColor: getTagHexColor(tagTotal.color) }}
+                            style={{ backgroundColor: getBankHexColor(bankTotal.color) }}
                           />
-                          <span className="text-sm text-gray-300">{tagTotal.name}</span>
+                          <span className="text-sm text-gray-300">{bankTotal.name}</span>
                         </div>
                         <span className="text-sm font-medium text-gray-200">
-                          {formatCurrency(tagTotal.total)}
+                          {formatCurrency(bankTotal.total)}
                         </span>
                       </div>
                     ))}
@@ -166,13 +166,13 @@ export function MonthlyView() {
                   {/* Multi-color progress bar (proportional, no budget cap) */}
                   <div className="mt-3 w-full h-3 bg-gray-700 rounded-full overflow-hidden">
                     <div className="h-full flex">
-                      {tagTotals.map((tagTotal) => (
+                      {bankTotals.map((bankTotal) => (
                         <div
-                          key={tagTotal.tagId ?? 'untagged'}
+                          key={bankTotal.bankId ?? 'nobank'}
                           className="h-full transition-all duration-300"
                           style={{
-                            width: `${(tagTotal.total / total) * 100}%`,
-                            backgroundColor: getTagHexColor(tagTotal.color),
+                            width: `${(bankTotal.total / total) * 100}%`,
+                            backgroundColor: getBankHexColor(bankTotal.color),
                           }}
                         />
                       ))}

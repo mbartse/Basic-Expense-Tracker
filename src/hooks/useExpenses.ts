@@ -4,6 +4,7 @@ import {
   subscribeToDateExpenses,
   subscribeToWeekExpenses,
   subscribeToMonthExpenses,
+  subscribeToDateRangeExpenses,
   addExpense,
   deleteExpense,
   calculateTotal,
@@ -203,4 +204,33 @@ export function useExpenseActions() {
   }, []);
 
   return { add, remove, isAdding, error };
+}
+
+/**
+ * Hook for expenses within a date range
+ */
+export function useDateRangeExpenses(startDate: Date, endDate: Date) {
+  const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const startDateString = useMemo(() => getDateString(startDate), [startDate.getTime()]);
+  const endDateString = useMemo(() => getDateString(endDate), [endDate.getTime()]);
+
+  useEffect(() => {
+    setLoading(true);
+    const unsubscribe = subscribeToDateRangeExpenses(
+      startDateString,
+      endDateString,
+      (data) => {
+        setExpenses(data);
+        setLoading(false);
+      }
+    );
+
+    return unsubscribe;
+  }, [startDateString, endDateString]);
+
+  const total = calculateTotal(expenses);
+
+  return { expenses, loading, total };
 }

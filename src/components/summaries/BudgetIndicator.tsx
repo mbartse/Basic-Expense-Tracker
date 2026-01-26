@@ -2,11 +2,11 @@ import { useState, useMemo } from 'react';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { formatCurrency } from '../../utils/formatters';
 import { WEEKLY_BUDGET } from '../../constants/config';
-import { getTagHexColor } from '../../services/tagService';
-import type { Expense, Tag } from '../../types/expense';
+import { getBankHexColor } from '../../services/bankService';
+import type { Expense, Bank } from '../../types/expense';
 
-interface TagTotal {
-  tagId: string | null; // null for untagged
+interface BankTotal {
+  bankId: string | null; // null for no bank
   name: string;
   color: string;
   total: number;
@@ -17,8 +17,8 @@ interface BudgetIndicatorProps {
   budget?: number; // in cents, defaults to weekly budget
   label?: string;
   expenses?: Expense[];
-  tags?: Tag[];
-  showTagBreakdown?: boolean;
+  banks?: Bank[];
+  showBankBreakdown?: boolean;
 }
 
 export function BudgetIndicator({
@@ -26,8 +26,8 @@ export function BudgetIndicator({
   budget = WEEKLY_BUDGET,
   label = 'Week Budget',
   expenses = [],
-  tags = [],
-  showTagBreakdown = false,
+  banks = [],
+  showBankBreakdown = false,
 }: BudgetIndicatorProps) {
   const [isExpanded, setIsExpanded] = useState(false);
 
@@ -46,42 +46,42 @@ export function BudgetIndicator({
     textColor = 'text-yellow-400';
   }
 
-  // Calculate tag totals
-  const tagTotals = useMemo((): TagTotal[] => {
-    if (!showTagBreakdown || expenses.length === 0) return [];
+  // Calculate bank totals
+  const bankTotals = useMemo((): BankTotal[] => {
+    if (!showBankBreakdown || expenses.length === 0) return [];
 
-    const tagsMap = new Map(tags.map(t => [t.id, t]));
+    const banksMap = new Map(banks.map(b => [b.id, b]));
     const totals = new Map<string | null, number>();
 
     expenses.forEach(expense => {
-      if (expense.tagIds && expense.tagIds.length > 0) {
-        // Split amount equally among tags if multiple
-        const amountPerTag = expense.amount / expense.tagIds.length;
-        expense.tagIds.forEach(tagId => {
-          totals.set(tagId, (totals.get(tagId) || 0) + amountPerTag);
+      if (expense.bankIds && expense.bankIds.length > 0) {
+        // Split amount equally among banks if multiple
+        const amountPerBank = expense.amount / expense.bankIds.length;
+        expense.bankIds.forEach(bankId => {
+          totals.set(bankId, (totals.get(bankId) || 0) + amountPerBank);
         });
       } else {
-        // Untagged
+        // No bank
         totals.set(null, (totals.get(null) || 0) + expense.amount);
       }
     });
 
-    const result: TagTotal[] = [];
-    totals.forEach((total, tagId) => {
-      if (tagId === null) {
+    const result: BankTotal[] = [];
+    totals.forEach((total, bankId) => {
+      if (bankId === null) {
         result.push({
-          tagId: null,
-          name: 'Untagged',
+          bankId: null,
+          name: 'No Bank',
           color: 'gray-500',
           total: Math.round(total),
         });
       } else {
-        const tag = tagsMap.get(tagId);
-        if (tag) {
+        const bank = banksMap.get(bankId);
+        if (bank) {
           result.push({
-            tagId,
-            name: tag.name,
-            color: tag.color,
+            bankId,
+            name: bank.name,
+            color: bank.color,
             total: Math.round(total),
           });
         }
@@ -91,20 +91,20 @@ export function BudgetIndicator({
     // Sort by total descending
     result.sort((a, b) => b.total - a.total);
     return result;
-  }, [expenses, tags, showTagBreakdown]);
+  }, [expenses, banks, showBankBreakdown]);
 
   // Calculate segment widths for multi-color bar
   const segments = useMemo(() => {
-    if (!isExpanded || tagTotals.length === 0) return [];
+    if (!isExpanded || bankTotals.length === 0) return [];
 
-    const totalSpent = tagTotals.reduce((sum, t) => sum + t.total, 0);
+    const totalSpent = bankTotals.reduce((sum, b) => sum + b.total, 0);
     if (totalSpent === 0) return [];
 
-    return tagTotals.map(tagTotal => ({
-      ...tagTotal,
-      widthPercent: (tagTotal.total / budget) * 100,
+    return bankTotals.map(bankTotal => ({
+      ...bankTotal,
+      widthPercent: (bankTotal.total / budget) * 100,
     }));
-  }, [tagTotals, budget, isExpanded]);
+  }, [bankTotals, budget, isExpanded]);
 
   return (
     <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
@@ -122,11 +122,11 @@ export function BudgetIndicator({
           <div className="h-full flex">
             {segments.map((segment, index) => (
               <div
-                key={segment.tagId ?? 'untagged'}
+                key={segment.bankId ?? 'nobank'}
                 className="h-full transition-all duration-300"
                 style={{
                   width: `${Math.min(segment.widthPercent, 100 - segments.slice(0, index).reduce((sum, s) => sum + Math.min(s.widthPercent, 100), 0))}%`,
-                  backgroundColor: getTagHexColor(segment.color),
+                  backgroundColor: getBankHexColor(segment.color),
                 }}
               />
             ))}
@@ -148,8 +148,8 @@ export function BudgetIndicator({
         )}
       </div>
 
-      {/* Tag Breakdown Disclosure */}
-      {showTagBreakdown && tags.length > 0 && (
+      {/* Bank Breakdown Disclosure */}
+      {showBankBreakdown && banks.length > 0 && (
         <div className="mt-3 pt-3 border-t border-gray-700">
           <button
             onClick={() => setIsExpanded(!isExpanded)}
@@ -160,25 +160,25 @@ export function BudgetIndicator({
             ) : (
               <ChevronRight className="w-4 h-4" />
             )}
-            View by tags
+            View by bank
           </button>
 
-          {isExpanded && tagTotals.length > 0 && (
+          {isExpanded && bankTotals.length > 0 && (
             <div className="mt-3 space-y-2">
-              {tagTotals.map((tagTotal) => (
+              {bankTotals.map((bankTotal) => (
                 <div
-                  key={tagTotal.tagId ?? 'untagged'}
+                  key={bankTotal.bankId ?? 'nobank'}
                   className="flex items-center justify-between"
                 >
                   <div className="flex items-center gap-2">
                     <div
                       className="w-2.5 h-2.5 rounded-full"
-                      style={{ backgroundColor: getTagHexColor(tagTotal.color) }}
+                      style={{ backgroundColor: getBankHexColor(bankTotal.color) }}
                     />
-                    <span className="text-sm text-gray-300">{tagTotal.name}</span>
+                    <span className="text-sm text-gray-300">{bankTotal.name}</span>
                   </div>
                   <span className="text-sm font-medium text-gray-200">
-                    {formatCurrency(tagTotal.total)}
+                    {formatCurrency(bankTotal.total)}
                   </span>
                 </div>
               ))}
