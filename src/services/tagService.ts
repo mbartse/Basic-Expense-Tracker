@@ -9,7 +9,9 @@ import {
 import { db } from './firebase';
 import type { Tag } from '../types/expense';
 
-const TAGS_COLLECTION = 'tags';
+function getUserTagsCollection(userId: string) {
+  return collection(db, 'users', userId, 'tags');
+}
 
 const TAG_COLORS = [
   'teal-400',
@@ -30,23 +32,23 @@ function getRandomColor(): string {
   return TAG_COLORS[Math.floor(Math.random() * TAG_COLORS.length)];
 }
 
-export async function addTag(name: string): Promise<string> {
+export async function addTag(userId: string, name: string): Promise<string> {
   const tagData = {
     name: name.trim(),
     color: getRandomColor(),
     createdAt: Timestamp.now(),
   };
 
-  const docRef = await addDoc(collection(db, TAGS_COLLECTION), tagData);
+  const docRef = await addDoc(getUserTagsCollection(userId), tagData);
   return docRef.id;
 }
 
-export async function deleteTag(id: string): Promise<void> {
-  await deleteDoc(doc(db, TAGS_COLLECTION, id));
+export async function deleteTag(userId: string, id: string): Promise<void> {
+  await deleteDoc(doc(db, 'users', userId, 'tags', id));
 }
 
-export function subscribeToTags(callback: (tags: Tag[]) => void): () => void {
-  return onSnapshot(collection(db, TAGS_COLLECTION), (snapshot) => {
+export function subscribeToTags(userId: string, callback: (tags: Tag[]) => void): () => void {
+  return onSnapshot(getUserTagsCollection(userId), (snapshot) => {
     const tags = snapshot.docs.map((doc) => ({
       id: doc.id,
       ...doc.data(),

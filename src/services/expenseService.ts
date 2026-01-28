@@ -13,7 +13,9 @@ import { db } from './firebase';
 import type { Expense, ExpenseInput } from '../types/expense';
 import { getDateString, getWeekKey, getMonthKey } from '../utils/dateUtils';
 
-const EXPENSES_COLLECTION = 'expenses';
+function getUserExpensesCollection(userId: string) {
+  return collection(db, 'users', userId, 'expenses');
+}
 
 function mapDocToExpense(doc: { id: string; data: () => Record<string, unknown> }): Expense {
   const data = doc.data();
@@ -33,7 +35,7 @@ function mapDocToExpense(doc: { id: string; data: () => Record<string, unknown> 
 /**
  * Add a new expense
  */
-export async function addExpense(input: ExpenseInput): Promise<string> {
+export async function addExpense(userId: string, input: ExpenseInput): Promise<string> {
   const date = input.date || new Date();
   const now = Timestamp.now();
 
@@ -51,7 +53,7 @@ export async function addExpense(input: ExpenseInput): Promise<string> {
     expenseData.tagIds = input.tagIds;
   }
 
-  const docRef = await addDoc(collection(db, EXPENSES_COLLECTION), expenseData);
+  const docRef = await addDoc(getUserExpensesCollection(userId), expenseData);
   return docRef.id;
 }
 
@@ -59,10 +61,11 @@ export async function addExpense(input: ExpenseInput): Promise<string> {
  * Update an existing expense
  */
 export async function updateExpense(
+  userId: string,
   id: string,
   input: Partial<ExpenseInput>
 ): Promise<void> {
-  const docRef = doc(db, EXPENSES_COLLECTION, id);
+  const docRef = doc(db, 'users', userId, 'expenses', id);
   const updates: Record<string, unknown> = {};
 
   if (input.amount !== undefined) {
@@ -87,19 +90,20 @@ export async function updateExpense(
 /**
  * Delete an expense
  */
-export async function deleteExpense(id: string): Promise<void> {
-  await deleteDoc(doc(db, EXPENSES_COLLECTION, id));
+export async function deleteExpense(userId: string, id: string): Promise<void> {
+  await deleteDoc(doc(db, 'users', userId, 'expenses', id));
 }
 
 /**
  * Subscribe to expenses for a specific date
  */
 export function subscribeToDateExpenses(
+  userId: string,
   dateString: string,
   callback: (expenses: Expense[]) => void
 ): () => void {
   const q = query(
-    collection(db, EXPENSES_COLLECTION),
+    getUserExpensesCollection(userId),
     where('dateString', '==', dateString)
   );
 
@@ -115,11 +119,12 @@ export function subscribeToDateExpenses(
  * Subscribe to expenses for a specific week
  */
 export function subscribeToWeekExpenses(
+  userId: string,
   weekKey: string,
   callback: (expenses: Expense[]) => void
 ): () => void {
   const q = query(
-    collection(db, EXPENSES_COLLECTION),
+    getUserExpensesCollection(userId),
     where('weekKey', '==', weekKey)
   );
 
@@ -140,11 +145,12 @@ export function subscribeToWeekExpenses(
  * Subscribe to expenses for a specific month
  */
 export function subscribeToMonthExpenses(
+  userId: string,
   monthKey: string,
   callback: (expenses: Expense[]) => void
 ): () => void {
   const q = query(
-    collection(db, EXPENSES_COLLECTION),
+    getUserExpensesCollection(userId),
     where('monthKey', '==', monthKey)
   );
 
@@ -165,12 +171,13 @@ export function subscribeToMonthExpenses(
  * Subscribe to expenses within a date range
  */
 export function subscribeToDateRangeExpenses(
+  userId: string,
   startDateString: string,
   endDateString: string,
   callback: (expenses: Expense[]) => void
 ): () => void {
   const q = query(
-    collection(db, EXPENSES_COLLECTION),
+    getUserExpensesCollection(userId),
     where('dateString', '>=', startDateString),
     where('dateString', '<=', endDateString)
   );

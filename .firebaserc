@@ -1,5 +1,7 @@
 {
   "projects": {
-    "default": "deployed-album-tracker"
-  }
+    "default": "expense-tracker-9c354"
+  },
+  "targets": {},
+  "etags": {}
 }

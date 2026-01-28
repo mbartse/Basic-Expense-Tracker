@@ -1,5 +1,6 @@
 import { NavLink } from 'react-router-dom';
-import { CalendarDays, CalendarRange, Calendar, Receipt } from 'lucide-react';
+import { CalendarDays, CalendarRange, Calendar, Receipt, LogOut } from 'lucide-react';
+import { useAuth } from '../../contexts/AuthContext';
 
 const navItems = [
   { path: '/', label: 'Daily', icon: CalendarDays },
@@ -9,6 +10,8 @@ const navItems = [
 ];
 
 export function BottomNav() {
+  const { user, signOut } = useAuth();
+
   return (
     <nav className="fixed top-0 left-0 right-0 bg-gray-800 border-b border-gray-700 pt-safe z-50">
       <div className="flex justify-around items-center h-14">
@@ -26,6 +29,22 @@ export function BottomNav() {
             <span className="text-xs mt-0.5">{label}</span>
           </NavLink>
         ))}
+        <button
+          onClick={signOut}
+          className="flex flex-col items-center justify-center w-full h-full transition-colors text-gray-400 hover:text-red-400"
+          title={user?.email || 'Sign out'}
+        >
+          {user?.photoURL ? (
+            <img
+              src={user.photoURL}
+              alt=""
+              className="w-5 h-5 rounded-full"
+            />
+          ) : (
+            <LogOut className="w-5 h-5" />
+          )}
+          <span className="text-xs mt-0.5">Sign out</span>
+        </button>
       </div>
     </nav>
   );
