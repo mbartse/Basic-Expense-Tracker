@@ -1,4 +1,4 @@
-import type { Expense, Bank } from '../../types/expense';
+import type { Expense, Tag } from '../../types/expense';
 import { ExpenseItem } from './ExpenseItem';
 import { formatCurrency } from '../../utils/formatters';
 
@@ -6,10 +6,11 @@ interface ExpenseListProps {
   expenses: Expense[];
   total: number;
   onDelete?: (id: string) => void;
+  onEdit?: (expense: Expense) => void;
   showTotal?: boolean;
   showDate?: boolean;
-  showBanks?: boolean;
-  banks?: Bank[];
+  showTags?: boolean;
+  tags?: Tag[];
   emptyMessage?: string;
 }
 
@@ -17,10 +18,11 @@ export function ExpenseList({
   expenses,
   total,
   onDelete,
+  onEdit,
   showTotal = true,
   showDate = false,
-  showBanks = false,
-  banks = [],
+  showTags = false,
+  tags = [],
   emptyMessage = 'No expenses yet',
 }: ExpenseListProps) {
   if (expenses.length === 0) {
@@ -39,10 +41,11 @@ export function ExpenseList({
           key={expense.id}
           expense={expense}
           onDelete={onDelete}
+          onEdit={onEdit}
           showDate={showDate}
           showTime={!showDate}
-          showBanks={showBanks}
-          banks={banks}
+          showTags={showTags}
+          tags={tags}
         />
       ))}
 

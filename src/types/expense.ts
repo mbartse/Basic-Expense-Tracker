@@ -1,6 +1,6 @@
 import { Timestamp } from 'firebase/firestore';
 
-export interface Bank {
+export interface Tag {
   id: string;
   name: string;
   color: string;         // Tailwind color class (e.g., 'teal-400')
@@ -15,14 +15,14 @@ export interface Expense {
   weekKey: string;       // "YYYY-Www" (ISO week format)
   monthKey: string;      // "YYYY-MM" for month queries
   createdAt: Timestamp;
-  bankIds?: string[];     // Optional array of tag IDs
+  tagIds?: string[];     // Optional array of tag IDs
 }
 
 export interface ExpenseInput {
   amount: number;        // Amount in cents
   name: string;
   date?: Date;           // Defaults to today
-  bankIds?: string[];     // Optional array of tag IDs
+  tagIds?: string[];     // Optional array of tag IDs
 }
 
 export interface DayExpenses {

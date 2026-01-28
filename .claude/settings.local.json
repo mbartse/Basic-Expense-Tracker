@@ -13,7 +13,11 @@
       "Bash(firebase hosting:sites:create:*)",
       "Bash(dir:*)",
       "Bash(timeout:*)",
-      "Bash(npx firebase deploy --only firestore:rules)"
+      "Bash(npx firebase deploy --only firestore:rules)",
+      "Bash(del \"C:\\\\Users\\\\bartm\\\\Documents\\\\ClaudeProjects\\\\expense-tracker\\\\src\\\\services\\\\bankService.ts\")",
+      "Bash(del \"C:\\\\Users\\\\bartm\\\\Documents\\\\ClaudeProjects\\\\expense-tracker\\\\src\\\\hooks\\\\useBanks.ts\")",
+      "Bash(del \"C:\\\\Users\\\\bartm\\\\Documents\\\\ClaudeProjects\\\\expense-tracker\\\\src\\\\pages\\\\BankView.tsx\")",
+      "Bash(npx tsc:*)"
     ]
   }
 }

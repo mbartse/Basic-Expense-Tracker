@@ -1,11 +1,11 @@
 import { NavLink } from 'react-router-dom';
-import { CalendarDays, CalendarRange, Calendar, Building2 } from 'lucide-react';
+import { CalendarDays, CalendarRange, Calendar, Receipt } from 'lucide-react';
 
 const navItems = [
   { path: '/', label: 'Daily', icon: CalendarDays },
   { path: '/weekly', label: 'Weekly', icon: CalendarRange },
   { path: '/monthly', label: 'Monthly', icon: Calendar },
-  { path: '/bank', label: 'Bank', icon: Building2 },
+  { path: '/transactions', label: 'Transactions', icon: Receipt },
 ];
 
 export function BottomNav() {

@@ -6,6 +6,8 @@ import {
   format,
   getISOWeek,
   getYear,
+  addDays,
+  subDays,
   addWeeks,
   subWeeks,
   addMonths,
@@ -89,6 +91,14 @@ export function getDaysInMonth(monthStart: Date): Date[] {
     start: monthStart,
     end: endOfMonth(monthStart),
   });
+}
+
+export function getPreviousDay(date: Date): Date {
+  return subDays(date, 1);
+}
+
+export function getNextDay(date: Date): Date {
+  return addDays(date, 1);
 }
 
 /**

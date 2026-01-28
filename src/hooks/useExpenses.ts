@@ -6,6 +6,7 @@ import {
   subscribeToMonthExpenses,
   subscribeToDateRangeExpenses,
   addExpense,
+  updateExpense,
   deleteExpense,
   calculateTotal,
 } from '../services/expenseService';
@@ -193,6 +194,16 @@ export function useExpenseActions() {
     }
   }, []);
 
+  const update = useCallback(async (id: string, input: Partial<ExpenseInput>) => {
+    setError(null);
+    try {
+      await updateExpense(id, input);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update expense');
+      throw err;
+    }
+  }, []);
+
   const remove = useCallback(async (id: string) => {
     setError(null);
     try {
@@ -203,7 +214,7 @@ export function useExpenseActions() {
     }
   }, []);
 
-  return { add, remove, isAdding, error };
+  return { add, update, remove, isAdding, error };
 }
 
 /**

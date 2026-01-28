@@ -15,10 +15,6 @@ import { getDateString, getWeekKey, getMonthKey } from '../utils/dateUtils';
 
 const EXPENSES_COLLECTION = 'expenses';
 
-/**
- * Map Firestore document data to Expense type
- * Handles tagIds -> bankIds field mapping for backward compatibility
- */
 function mapDocToExpense(doc: { id: string; data: () => Record<string, unknown> }): Expense {
   const data = doc.data();
   return {
@@ -30,7 +26,7 @@ function mapDocToExpense(doc: { id: string; data: () => Record<string, unknown> 
     weekKey: data.weekKey as string,
     monthKey: data.monthKey as string,
     createdAt: data.createdAt as import('firebase/firestore').Timestamp,
-    bankIds: data.tagIds as string[] | undefined,
+    tagIds: data.tagIds as string[] | undefined,
   };
 }
 
@@ -51,9 +47,8 @@ export async function addExpense(input: ExpenseInput): Promise<string> {
     createdAt: now,
   };
 
-  // Only add bankIds if provided and not empty (stored as tagIds in Firestore for compatibility)
-  if (input.bankIds && input.bankIds.length > 0) {
-    expenseData.tagIds = input.bankIds;
+  if (input.tagIds && input.tagIds.length > 0) {
+    expenseData.tagIds = input.tagIds;
   }
 
   const docRef = await addDoc(collection(db, EXPENSES_COLLECTION), expenseData);
@@ -82,8 +77,8 @@ export async function updateExpense(
     updates.weekKey = getWeekKey(input.date);
     updates.monthKey = getMonthKey(input.date);
   }
-  if (input.bankIds !== undefined) {
-    updates.tagIds = input.bankIds.length > 0 ? input.bankIds : [];
+  if (input.tagIds !== undefined) {
+    updates.tagIds = input.tagIds.length > 0 ? input.tagIds : [];
   }
 
   await updateDoc(docRef, updates);

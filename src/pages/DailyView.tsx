@@ -1,77 +1,138 @@
-import { useState } from 'react';
-import { Tag } from 'lucide-react';
+import { useState, useMemo, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { Tag as TagIcon } from 'lucide-react';
 import { formatDateFull } from '../utils/formatters';
 import { BudgetIndicator } from '../components/summaries/BudgetIndicator';
 import { ExpenseList } from '../components/expenses/ExpenseList';
 import { AddExpenseModal } from '../components/expenses/AddExpenseModal';
 import { AddExpenseButton } from '../components/expenses/AddExpenseButton';
+import { DateNavigator } from '../components/navigation/DateNavigator';
 import { WeekSummary } from '../components/summaries/WeekSummary';
 import { MonthSummary } from '../components/summaries/MonthSummary';
 import {
-  useTodayExpenses,
-  useCurrentWeekExpenses,
-  useCurrentMonthExpenses,
+  useDateExpenses,
+  useWeekExpenses,
+  useMonthExpenses,
   useExpenseActions,
 } from '../hooks/useExpenses';
-import { useBanks } from '../hooks/useBanks';
+import { useTags } from '../hooks/useTags';
+import {
+  parseISO,
+  getWeekStart,
+  getMonthStart,
+  getPreviousDay,
+  getNextDay,
+  getDateString,
+  isToday,
+} from '../utils/dateUtils';
+import type { Expense, ExpenseInput } from '../types/expense';
 
 export function DailyView() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [showBanks, setShowBanks] = useState(false);
-  const { expenses: todayExpenses, total: todayTotal, loading: todayLoading } = useTodayExpenses();
-  const { total: weekTotal } = useCurrentWeekExpenses();
-  const { total: monthTotal } = useCurrentMonthExpenses();
-  const { add, remove } = useExpenseActions();
-  const { banks } = useBanks();
+  const [showTags, setShowTags] = useState(false);
+  const [editingExpense, setEditingExpense] = useState<Expense | undefined>();
 
-  const today = new Date();
+  const currentDate = useMemo(() => {
+    const dateParam = searchParams.get('date');
+    if (dateParam) {
+      try {
+        return parseISO(dateParam);
+      } catch {
+        return new Date();
+      }
+    }
+    return new Date();
+  }, [searchParams]);
+
+  const weekStart = useMemo(() => getWeekStart(currentDate), [currentDate]);
+  const monthStart = useMemo(() => getMonthStart(currentDate), [currentDate]);
+
+  const { expenses: dayExpenses, total: dayTotal, loading: dayLoading } = useDateExpenses(currentDate);
+  const { total: weekTotal } = useWeekExpenses(weekStart);
+  const { total: monthTotal } = useMonthExpenses(monthStart);
+  const { add, update, remove } = useExpenseActions();
+  const { tags } = useTags();
+
+  const isTodayDate = isToday(currentDate);
+
+  const setCurrentDate = useCallback((date: Date) => {
+    if (isToday(date)) {
+      setSearchParams({});
+    } else {
+      setSearchParams({ date: getDateString(date) });
+    }
+  }, [setSearchParams]);
+
+  const handlePrevious = () => setCurrentDate(getPreviousDay(currentDate));
+  const handleNext = () => setCurrentDate(getNextDay(currentDate));
+  const handleToday = () => setCurrentDate(new Date());
+
+  const handleAdd = useCallback(async (input: ExpenseInput) => {
+    await add({
+      ...input,
+      date: currentDate,
+    });
+  }, [add, currentDate]);
+
+  const handleUpdate = useCallback(async (id: string, input: Partial<ExpenseInput>) => {
+    await update(id, input);
+  }, [update]);
+
+  const handleEdit = useCallback((expense: Expense) => {
+    setEditingExpense(expense);
+    setIsModalOpen(true);
+  }, []);
+
+  const handleCloseModal = useCallback(() => {
+    setIsModalOpen(false);
+    setEditingExpense(undefined);
+  }, []);
 
   return (
-    <div className="min-h-screen bg-gray-900 pt-20 pb-8">
-      {/* Header */}
-      <header className="bg-gray-800 border-b border-gray-700 px-4 py-4">
-        <h1 className="text-xl font-semibold text-gray-100">
-          {formatDateFull(today)}
-        </h1>
-      </header>
+    <div className="min-h-screen bg-gray-900 pt-14 pb-8">
+      <DateNavigator
+        label={formatDateFull(currentDate)}
+        onPrevious={handlePrevious}
+        onNext={handleNext}
+        onToday={handleToday}
+      />
 
       <main className="p-4 space-y-4">
-        {/* Budget Indicator */}
         <BudgetIndicator spent={weekTotal} />
 
-        {/* Today's Expenses */}
         <section>
           <div className="flex justify-between items-center mb-3">
             <h2 className="text-lg font-medium text-gray-100">
-              Today's Expenses
+              {isTodayDate ? "Today's Expenses" : 'Expenses'}
             </h2>
             <button
-              onClick={() => setShowBanks(!showBanks)}
+              onClick={() => setShowTags(!showTags)}
               className={`flex items-center gap-1.5 px-3 py-1.5 text-sm border rounded-lg transition-colors ${
-                showBanks
+                showTags
                   ? 'text-blue-400 bg-blue-900/30 border-blue-700'
                   : 'text-gray-400 hover:text-gray-200 bg-gray-800 border-gray-700'
               }`}
             >
-              <Tag className="w-4 h-4" />
-              Banks
+              <TagIcon className="w-4 h-4" />
+              Tags
             </button>
           </div>
-          {todayLoading ? (
+          {dayLoading ? (
             <div className="py-12 text-center text-gray-400">Loading...</div>
           ) : (
             <ExpenseList
-              expenses={todayExpenses}
-              total={todayTotal}
+              expenses={dayExpenses}
+              total={dayTotal}
               onDelete={remove}
-              showBanks={showBanks}
-              banks={banks}
-              emptyMessage="No expenses today"
+              onEdit={handleEdit}
+              showTags={showTags}
+              tags={tags}
+              emptyMessage={isTodayDate ? 'No expenses today' : 'No expenses on this day'}
             />
           )}
         </section>
 
-        {/* Summary Section */}
         <section className="bg-gray-800 rounded-lg p-4 border border-gray-700">
           <WeekSummary total={weekTotal} compact />
           <div className="border-t border-gray-700 my-2" />
@@ -79,14 +140,14 @@ export function DailyView() {
         </section>
       </main>
 
-      {/* Add Expense Button */}
       <AddExpenseButton onClick={() => setIsModalOpen(true)} />
 
-      {/* Add Expense Modal */}
       <AddExpenseModal
         isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        onSubmit={add}
+        onClose={handleCloseModal}
+        onSubmit={handleAdd}
+        editingExpense={editingExpense}
+        onUpdate={handleUpdate}
       />
     </div>
   );

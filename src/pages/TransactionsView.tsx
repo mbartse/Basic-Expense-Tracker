@@ -1,20 +1,21 @@
-import { useState, useMemo } from 'react';
-import { Building2, ArrowUpDown } from 'lucide-react';
+import { useState, useMemo, useCallback } from 'react';
+import { Receipt, ArrowUpDown, Check, X } from 'lucide-react';
 import { ExpenseList } from '../components/expenses/ExpenseList';
 import { AddExpenseModal } from '../components/expenses/AddExpenseModal';
 import { AddExpenseButton } from '../components/expenses/AddExpenseButton';
 import { useDateRangeExpenses, useExpenseActions } from '../hooks/useExpenses';
-import { useBanks } from '../hooks/useBanks';
+import { useTags } from '../hooks/useTags';
 import { formatCurrency } from '../utils/formatters';
-import { getBankHexColor } from '../services/bankService';
+import { getTagHexColor } from '../services/tagService';
 import { getDateString } from '../utils/dateUtils';
+import type { Expense, ExpenseInput } from '../types/expense';
 
-export function BankView() {
+export function TransactionsView() {
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedBankId, setSelectedBankId] = useState<string | null>(null);
+  const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
   const [sortNewestFirst, setSortNewestFirst] = useState(true);
+  const [editingExpense, setEditingExpense] = useState<Expense | undefined>();
 
-  // Default to current month range
   const today = new Date();
   const defaultStartDate = new Date(today.getFullYear(), today.getMonth(), 1);
   const defaultEndDate = new Date(today.getFullYear(), today.getMonth() + 1, 0);
@@ -22,33 +23,36 @@ export function BankView() {
   const [startDate, setStartDate] = useState(defaultStartDate);
   const [endDate, setEndDate] = useState(defaultEndDate);
 
-  const { banks, loading: banksLoading } = useBanks();
+  const { tags, loading: tagsLoading } = useTags();
   const { expenses: allExpenses, loading: expensesLoading, total: allTotal } = useDateRangeExpenses(startDate, endDate);
-  const { add, remove } = useExpenseActions();
+  const { add, update, remove } = useExpenseActions();
 
-  // Filter and sort expenses by selected bank
+  const toggleTag = (tagId: string) => {
+    setSelectedTagIds(prev =>
+      prev.includes(tagId)
+        ? prev.filter(id => id !== tagId)
+        : [...prev, tagId]
+    );
+  };
+
+  const clearTags = () => setSelectedTagIds([]);
+
   const filteredExpenses = useMemo(() => {
     let expenses = allExpenses;
-    if (selectedBankId) {
+    if (selectedTagIds.length > 0) {
       expenses = allExpenses.filter(
-        (expense) => expense.bankIds && expense.bankIds.includes(selectedBankId)
+        (expense) => expense.tagIds && expense.tagIds.some(id => selectedTagIds.includes(id))
       );
     }
-    // Sort by date
     return [...expenses].sort((a, b) => {
       const dateCompare = a.dateString.localeCompare(b.dateString);
       return sortNewestFirst ? -dateCompare : dateCompare;
     });
-  }, [allExpenses, selectedBankId, sortNewestFirst]);
+  }, [allExpenses, selectedTagIds, sortNewestFirst]);
 
-  // Calculate total for filtered expenses
   const filteredTotal = useMemo(() => {
     return filteredExpenses.reduce((sum, expense) => sum + expense.amount, 0);
   }, [filteredExpenses]);
-
-  const selectedBank = useMemo(() => {
-    return banks.find((b) => b.id === selectedBankId);
-  }, [banks, selectedBankId]);
 
   const handleStartDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
@@ -64,36 +68,77 @@ export function BankView() {
     }
   };
 
-  const loading = banksLoading || expensesLoading;
+  const handleEdit = useCallback((expense: Expense) => {
+    setEditingExpense(expense);
+    setIsModalOpen(true);
+  }, []);
+
+  const handleCloseModal = useCallback(() => {
+    setIsModalOpen(false);
+    setEditingExpense(undefined);
+  }, []);
+
+  const handleUpdate = useCallback(async (id: string, input: Partial<ExpenseInput>) => {
+    await update(id, input);
+  }, [update]);
+
+  const loading = tagsLoading || expensesLoading;
 
   return (
     <div className="min-h-screen bg-gray-900 pt-20 pb-8">
-      {/* Header */}
       <header className="bg-gray-800 border-b border-gray-700 px-4 py-4">
         <div className="flex items-center gap-2">
-          <Building2 className="w-5 h-5 text-blue-400" />
-          <h1 className="text-xl font-semibold text-gray-100">Bank View</h1>
+          <Receipt className="w-5 h-5 text-blue-400" />
+          <h1 className="text-xl font-semibold text-gray-100">Transactions</h1>
         </div>
       </header>
 
       <main className="p-4 space-y-4">
-        {/* Bank Selector */}
+        {/* Tag Filter */}
         <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
-          <label className="block text-sm font-medium text-gray-300 mb-2">
-            Select Bank
-          </label>
-          <select
-            value={selectedBankId || ''}
-            onChange={(e) => setSelectedBankId(e.target.value || null)}
-            className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-          >
-            <option value="">All Banks</option>
-            {banks.map((bank) => (
-              <option key={bank.id} value={bank.id}>
-                {bank.name}
-              </option>
-            ))}
-          </select>
+          <div className="flex justify-between items-center mb-2">
+            <label className="block text-sm font-medium text-gray-300">
+              Filter by Tags
+            </label>
+            {selectedTagIds.length > 0 && (
+              <button
+                onClick={clearTags}
+                className="flex items-center gap-1 text-xs text-gray-400 hover:text-gray-200 transition-colors"
+              >
+                <X className="w-3 h-3" />
+                Clear
+              </button>
+            )}
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {tags.map((tag) => {
+              const isSelected = selectedTagIds.includes(tag.id);
+              const hexColor = getTagHexColor(tag.color);
+              return (
+                <button
+                  key={tag.id}
+                  onClick={() => toggleTag(tag.id)}
+                  className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all flex items-center gap-1.5 ${
+                    isSelected
+                      ? 'ring-2 ring-offset-1 ring-offset-gray-800'
+                      : 'opacity-70 hover:opacity-100'
+                  }`}
+                  style={{
+                    backgroundColor: `${hexColor}20`,
+                    color: hexColor,
+                    borderColor: hexColor,
+                    ...(isSelected ? { ringColor: hexColor } : {}),
+                  }}
+                >
+                  {isSelected && <Check className="w-3 h-3" />}
+                  {tag.name}
+                </button>
+              );
+            })}
+            {tags.length === 0 && !tagsLoading && (
+              <span className="text-sm text-gray-500">No tags created yet</span>
+            )}
+          </div>
         </div>
 
         {/* Date Range Selector */}
@@ -126,21 +171,11 @@ export function BankView() {
         {/* Total Card */}
         <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
           <div className="flex justify-between items-center">
-            <div className="flex items-center gap-2">
-              {selectedBank ? (
-                <>
-                  <div
-                    className="w-3 h-3 rounded-full"
-                    style={{ backgroundColor: getBankHexColor(selectedBank.color) }}
-                  />
-                  <span className="text-gray-400">{selectedBank.name} Total</span>
-                </>
-              ) : (
-                <span className="text-gray-400">All Banks Total</span>
-              )}
-            </div>
+            <span className="text-gray-400">
+              {selectedTagIds.length > 0 ? 'Filtered Total' : 'Total'}
+            </span>
             <span className="text-2xl font-bold text-gray-100">
-              {formatCurrency(selectedBankId ? filteredTotal : allTotal)}
+              {formatCurrency(selectedTagIds.length > 0 ? filteredTotal : allTotal)}
             </span>
           </div>
         </div>
@@ -166,10 +201,13 @@ export function BankView() {
               expenses={filteredExpenses}
               total={filteredTotal}
               onDelete={remove}
+              onEdit={handleEdit}
               showDate
+              showTags
+              tags={tags}
               emptyMessage={
-                selectedBankId
-                  ? 'No expenses for this bank in the selected date range'
+                selectedTagIds.length > 0
+                  ? 'No expenses matching selected tags in this date range'
                   : 'No expenses in the selected date range'
               }
             />
@@ -177,14 +215,14 @@ export function BankView() {
         </section>
       </main>
 
-      {/* Add Expense Button */}
       <AddExpenseButton onClick={() => setIsModalOpen(true)} />
 
-      {/* Add Expense Modal */}
       <AddExpenseModal
         isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
+        onClose={handleCloseModal}
         onSubmit={add}
+        editingExpense={editingExpense}
+        onUpdate={handleUpdate}
       />
     </div>
   );

@@ -1,74 +1,81 @@
 import { useState, useRef, useEffect } from 'react';
 import { X, Plus, Check } from 'lucide-react';
-import type { ExpenseInput } from '../../types/expense';
+import type { Expense, ExpenseInput } from '../../types/expense';
 import { parseToCents } from '../../utils/formatters';
-import { useBanks } from '../../hooks/useBanks';
-import { getBankHexColor } from '../../services/bankService';
+import { useTags } from '../../hooks/useTags';
+import { getTagHexColor } from '../../services/tagService';
 
 interface AddExpenseModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (expense: ExpenseInput) => Promise<void>;
+  editingExpense?: Expense;
+  onUpdate?: (id: string, input: Partial<ExpenseInput>) => Promise<void>;
 }
 
-export function AddExpenseModal({ isOpen, onClose, onSubmit }: AddExpenseModalProps) {
+export function AddExpenseModal({ isOpen, onClose, onSubmit, editingExpense, onUpdate }: AddExpenseModalProps) {
   const [amount, setAmount] = useState('');
   const [name, setName] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
-  const [selectedBankIds, setSelectedBankIds] = useState<string[]>([]);
-  const [isAddingBank, setIsAddingBank] = useState(false);
-  const [newBankName, setNewBankName] = useState('');
+  const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
+  const [isAddingTag, setIsAddingTag] = useState(false);
+  const [newTagName, setNewTagName] = useState('');
   const amountInputRef = useRef<HTMLInputElement>(null);
-  const newBankInputRef = useRef<HTMLInputElement>(null);
+  const newTagInputRef = useRef<HTMLInputElement>(null);
 
-  const { banks, addBank } = useBanks();
+  const { tags, addTag } = useTags();
 
-  // Reset form when modal opens
+  const isEditing = !!editingExpense;
+
   useEffect(() => {
     if (isOpen) {
-      setAmount('');
-      setName('');
+      if (editingExpense) {
+        setAmount((editingExpense.amount / 100).toString());
+        setName(editingExpense.name);
+        setSelectedTagIds(editingExpense.tagIds || []);
+      } else {
+        setAmount('');
+        setName('');
+        setSelectedTagIds([]);
+      }
       setError('');
-      setSelectedBankIds([]);
-      setIsAddingBank(false);
-      setNewBankName('');
-      // Focus amount input after a short delay for animation
+      setIsAddingTag(false);
+      setNewTagName('');
       setTimeout(() => {
         amountInputRef.current?.focus();
       }, 100);
     }
-  }, [isOpen]);
+  }, [isOpen, editingExpense]);
 
-  // Focus new bank input when adding
   useEffect(() => {
-    if (isAddingBank) {
+    if (isAddingTag) {
       setTimeout(() => {
-        newBankInputRef.current?.focus();
+        newTagInputRef.current?.focus();
       }, 50);
     }
-  }, [isAddingBank]);
+  }, [isAddingTag]);
 
-  const toggleBank = (bankId: string) => {
-    setSelectedBankIds(prev =>
-      prev.includes(bankId)
-        ? prev.filter(id => id !== bankId)
-        : [...prev, bankId]
+  const toggleTag = (tagId: string) => {
+    setSelectedTagIds(prev =>
+      prev.includes(tagId)
+        ? prev.filter(id => id !== tagId)
+        : [...prev, tagId]
     );
   };
 
-  const handleAddBank = async () => {
-    if (!newBankName.trim()) return;
+  const handleAddTag = async () => {
+    if (!newTagName.trim()) return;
     try {
-      const newBankId = await addBank(newBankName.trim());
-      setSelectedBankIds(prev => [...prev, newBankId]);
-      setNewBankName('');
-      setIsAddingBank(false);
+      const newTagId = await addTag(newTagName.trim());
+      setSelectedTagIds(prev => [...prev, newTagId]);
+      setNewTagName('');
+      setIsAddingTag(false);
     } catch (err) {
-      console.error('Failed to create bank:', err);
-      setError('Failed to create bank. Check Firestore rules.');
-      setIsAddingBank(false);
-      setNewBankName('');
+      console.error('Failed to create tag:', err);
+      setError('Failed to create tag. Check Firestore rules.');
+      setIsAddingTag(false);
+      setNewTagName('');
     }
   };
 
@@ -89,14 +96,22 @@ export function AddExpenseModal({ isOpen, onClose, onSubmit }: AddExpenseModalPr
 
     setIsSubmitting(true);
     try {
-      await onSubmit({
-        amount: cents,
-        name: name.trim(),
-        bankIds: selectedBankIds.length > 0 ? selectedBankIds : undefined,
-      });
+      if (isEditing && onUpdate && editingExpense) {
+        await onUpdate(editingExpense.id, {
+          amount: cents,
+          name: name.trim(),
+          tagIds: selectedTagIds.length > 0 ? selectedTagIds : [],
+        });
+      } else {
+        await onSubmit({
+          amount: cents,
+          name: name.trim(),
+          tagIds: selectedTagIds.length > 0 ? selectedTagIds : undefined,
+        });
+      }
       onClose();
     } catch {
-      setError('Failed to add expense. Please try again.');
+      setError(isEditing ? 'Failed to update expense. Please try again.' : 'Failed to add expense. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -106,16 +121,14 @@ export function AddExpenseModal({ isOpen, onClose, onSubmit }: AddExpenseModalPr
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center">
-      {/* Backdrop */}
       <div
         className="absolute inset-0 bg-black/70"
         onClick={onClose}
       />
 
-      {/* Modal */}
       <div className="relative w-full max-w-lg bg-gray-800 rounded-t-2xl p-6 pb-safe animate-slide-up">
         <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-semibold text-gray-100">Add Expense</h2>
+          <h2 className="text-xl font-semibold text-gray-100">{isEditing ? 'Edit Expense' : 'Add Expense'}</h2>
           <button
             onClick={onClose}
             className="p-2 text-gray-400 hover:text-gray-200 transition-colors"
@@ -126,7 +139,6 @@ export function AddExpenseModal({ isOpen, onClose, onSubmit }: AddExpenseModalPr
         </div>
 
         <form onSubmit={handleSubmit}>
-          {/* Amount Input */}
           <div className="mb-4">
             <label htmlFor="amount" className="block text-sm font-medium text-gray-300 mb-1">
               Amount
@@ -149,7 +161,6 @@ export function AddExpenseModal({ isOpen, onClose, onSubmit }: AddExpenseModalPr
             </div>
           </div>
 
-          {/* Name Input */}
           <div className="mb-4">
             <label htmlFor="name" className="block text-sm font-medium text-gray-300 mb-1">
               Description
@@ -164,20 +175,19 @@ export function AddExpenseModal({ isOpen, onClose, onSubmit }: AddExpenseModalPr
             />
           </div>
 
-          {/* Bank Selection */}
           <div className="mb-6">
             <label className="block text-sm font-medium text-gray-300 mb-2">
-              Bank (optional)
+              Tag (optional)
             </label>
             <div className="flex flex-wrap gap-2">
-              {banks.map((bank) => {
-                const isSelected = selectedBankIds.includes(bank.id);
-                const hexColor = getBankHexColor(bank.color);
+              {tags.map((tag) => {
+                const isSelected = selectedTagIds.includes(tag.id);
+                const hexColor = getTagHexColor(tag.color);
                 return (
                   <button
-                    key={bank.id}
+                    key={tag.id}
                     type="button"
-                    onClick={() => toggleBank(bank.id)}
+                    onClick={() => toggleTag(tag.id)}
                     className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all flex items-center gap-1.5 ${
                       isSelected
                         ? 'ring-2 ring-offset-1 ring-offset-gray-800'
@@ -191,35 +201,34 @@ export function AddExpenseModal({ isOpen, onClose, onSubmit }: AddExpenseModalPr
                     }}
                   >
                     {isSelected && <Check className="w-3 h-3" />}
-                    {bank.name}
+                    {tag.name}
                   </button>
                 );
               })}
 
-              {/* Add Bank Button / Input */}
-              {isAddingBank ? (
+              {isAddingTag ? (
                 <div className="flex items-center gap-1">
                   <input
-                    ref={newBankInputRef}
+                    ref={newTagInputRef}
                     type="text"
-                    value={newBankName}
-                    onChange={(e) => setNewBankName(e.target.value)}
+                    value={newTagName}
+                    onChange={(e) => setNewTagName(e.target.value)}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter') {
                         e.preventDefault();
-                        handleAddBank();
+                        handleAddTag();
                       } else if (e.key === 'Escape') {
-                        setIsAddingBank(false);
-                        setNewBankName('');
+                        setIsAddingTag(false);
+                        setNewTagName('');
                       }
                     }}
-                    placeholder="Bank name"
+                    placeholder="Tag name"
                     className="w-24 px-2 py-1 text-sm bg-gray-700 border border-gray-600 rounded-lg text-gray-100 placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
                   />
                   <button
                     type="button"
-                    onClick={handleAddBank}
-                    disabled={!newBankName.trim()}
+                    onClick={handleAddTag}
+                    disabled={!newTagName.trim()}
                     className="px-2 py-1 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-600 disabled:text-gray-400"
                   >
                     Add
@@ -228,7 +237,7 @@ export function AddExpenseModal({ isOpen, onClose, onSubmit }: AddExpenseModalPr
               ) : (
                 <button
                   type="button"
-                  onClick={() => setIsAddingBank(true)}
+                  onClick={() => setIsAddingTag(true)}
                   className="px-3 py-1.5 rounded-full text-sm font-medium bg-gray-700 text-gray-400 hover:bg-gray-600 hover:text-gray-200 transition-colors flex items-center gap-1"
                 >
                   <Plus className="w-4 h-4" />
@@ -237,18 +246,16 @@ export function AddExpenseModal({ isOpen, onClose, onSubmit }: AddExpenseModalPr
             </div>
           </div>
 
-          {/* Error Message */}
           {error && (
             <p className="text-red-400 text-sm mb-4">{error}</p>
           )}
 
-          {/* Submit Button */}
           <button
             type="submit"
             disabled={isSubmitting}
             className="w-full py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 active:bg-blue-800 disabled:bg-blue-800 disabled:text-gray-400 transition-colors"
           >
-            {isSubmitting ? 'Adding...' : 'Add Expense'}
+            {isSubmitting ? (isEditing ? 'Saving...' : 'Adding...') : (isEditing ? 'Save' : 'Add Expense')}
           </button>
         </form>
       </div>
