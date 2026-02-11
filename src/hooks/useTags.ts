@@ -1,6 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { Tag } from '../types/expense';
-import { subscribeToTags, addTag as addTagService } from '../services/tagService';
+import {
+  subscribeToTags,
+  addTag as addTagService,
+  updateTag as updateTagService,
+  deleteTag as deleteTagService,
+} from '../services/tagService';
 import { useAuth } from '../contexts/AuthContext';
 
 export function useTags() {
@@ -30,5 +35,19 @@ export function useTags() {
     return await addTagService(user.uid, name);
   }, [user]);
 
-  return { tags, loading, addTag };
+  const updateTag = useCallback(async (tagId: string, updates: { name?: string; color?: string }) => {
+    if (!user) {
+      throw new Error('Must be logged in to update tags');
+    }
+    return await updateTagService(user.uid, tagId, updates);
+  }, [user]);
+
+  const deleteTag = useCallback(async (tagId: string) => {
+    if (!user) {
+      throw new Error('Must be logged in to delete tags');
+    }
+    return await deleteTagService(user.uid, tagId);
+  }, [user]);
+
+  return { tags, loading, addTag, updateTag, deleteTag };
 }

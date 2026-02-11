@@ -12,6 +12,7 @@ import {
 import { db } from './firebase';
 import type { Expense, ExpenseInput } from '../types/expense';
 import { getDateString, getWeekKey, getMonthKey } from '../utils/dateUtils';
+import { updateTagLastUsed } from './tagService';
 
 function getUserExpensesCollection(userId: string) {
   return collection(db, 'users', userId, 'expenses');
@@ -54,6 +55,12 @@ export async function addExpense(userId: string, input: ExpenseInput): Promise<s
   }
 
   const docRef = await addDoc(getUserExpensesCollection(userId), expenseData);
+
+  // Update lastUsedAt for all tags
+  if (input.tagIds && input.tagIds.length > 0) {
+    await updateTagLastUsed(userId, input.tagIds);
+  }
+
   return docRef.id;
 }
 
@@ -85,6 +92,11 @@ export async function updateExpense(
   }
 
   await updateDoc(docRef, updates);
+
+  // Update lastUsedAt for all tags
+  if (input.tagIds && input.tagIds.length > 0) {
+    await updateTagLastUsed(userId, input.tagIds);
+  }
 }
 
 /**

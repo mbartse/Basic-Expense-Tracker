@@ -1,5 +1,5 @@
-import { useState, useRef, useEffect } from 'react';
-import { X, Plus, Check } from 'lucide-react';
+import { useState, useRef, useEffect, useMemo } from 'react';
+import { X, Plus, Check, ChevronDown, ChevronUp } from 'lucide-react';
 import type { Expense, ExpenseInput } from '../../types/expense';
 import { parseToCents } from '../../utils/formatters';
 import { useTags } from '../../hooks/useTags';
@@ -13,6 +13,8 @@ interface AddExpenseModalProps {
   onUpdate?: (id: string, input: Partial<ExpenseInput>) => Promise<void>;
 }
 
+const MAX_VISIBLE_TAGS = 10;
+
 export function AddExpenseModal({ isOpen, onClose, onSubmit, editingExpense, onUpdate }: AddExpenseModalProps) {
   const [amount, setAmount] = useState('');
   const [name, setName] = useState('');
@@ -21,12 +23,44 @@ export function AddExpenseModal({ isOpen, onClose, onSubmit, editingExpense, onU
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
   const [isAddingTag, setIsAddingTag] = useState(false);
   const [newTagName, setNewTagName] = useState('');
+  const [showAllTags, setShowAllTags] = useState(false);
   const amountInputRef = useRef<HTMLInputElement>(null);
   const newTagInputRef = useRef<HTMLInputElement>(null);
 
   const { tags, addTag } = useTags();
 
   const isEditing = !!editingExpense;
+
+  // Sort tags by lastUsedAt (most recent first), then by name
+  const sortedTags = useMemo(() => {
+    return [...tags].sort((a, b) => {
+      const aTime = a.lastUsedAt?.toMillis() ?? 0;
+      const bTime = b.lastUsedAt?.toMillis() ?? 0;
+      if (aTime !== bTime) {
+        return bTime - aTime; // Most recent first
+      }
+      return a.name.localeCompare(b.name);
+    });
+  }, [tags]);
+
+  // Get visible tags (top 10 + any selected tags that aren't in top 10)
+  const visibleTags = useMemo(() => {
+    if (showAllTags) {
+      return sortedTags;
+    }
+
+    const topTags = sortedTags.slice(0, MAX_VISIBLE_TAGS);
+    const topTagIds = new Set(topTags.map(t => t.id));
+
+    // Add any selected tags that aren't in the top 10
+    const selectedNotInTop = sortedTags.filter(
+      t => selectedTagIds.includes(t.id) && !topTagIds.has(t.id)
+    );
+
+    return [...topTags, ...selectedNotInTop];
+  }, [sortedTags, showAllTags, selectedTagIds]);
+
+  const hasHiddenTags = sortedTags.length > MAX_VISIBLE_TAGS;
 
   useEffect(() => {
     if (isOpen) {
@@ -42,6 +76,7 @@ export function AddExpenseModal({ isOpen, onClose, onSubmit, editingExpense, onU
       setError('');
       setIsAddingTag(false);
       setNewTagName('');
+      setShowAllTags(false);
       setTimeout(() => {
         amountInputRef.current?.focus();
       }, 100);
@@ -180,7 +215,7 @@ export function AddExpenseModal({ isOpen, onClose, onSubmit, editingExpense, onU
               Tag (optional)
             </label>
             <div className="flex flex-wrap gap-2">
-              {tags.map((tag) => {
+              {visibleTags.map((tag) => {
                 const isSelected = selectedTagIds.includes(tag.id);
                 const hexColor = getTagHexColor(tag.color);
                 return (
@@ -205,6 +240,26 @@ export function AddExpenseModal({ isOpen, onClose, onSubmit, editingExpense, onU
                   </button>
                 );
               })}
+
+              {hasHiddenTags && (
+                <button
+                  type="button"
+                  onClick={() => setShowAllTags(!showAllTags)}
+                  className="px-3 py-1.5 rounded-full text-sm font-medium bg-gray-700 text-gray-400 hover:bg-gray-600 hover:text-gray-200 transition-colors flex items-center gap-1"
+                >
+                  {showAllTags ? (
+                    <>
+                      <ChevronUp className="w-4 h-4" />
+                      Less
+                    </>
+                  ) : (
+                    <>
+                      <ChevronDown className="w-4 h-4" />
+                      More ({sortedTags.length - MAX_VISIBLE_TAGS})
+                    </>
+                  )}
+                </button>
+              )}
 
               {isAddingTag ? (
                 <div className="flex items-center gap-1">

@@ -4,6 +4,7 @@ import { WeeklyView } from './pages/WeeklyView';
 import { MonthlyView } from './pages/MonthlyView';
 import { TransactionsView } from './pages/TransactionsView';
 import { SettingsPage } from './pages/SettingsPage';
+import { QuickAddPage } from './pages/QuickAddPage';
 import { LoginPage } from './pages/LoginPage';
 import { BottomNav } from './components/navigation/BottomNav';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
@@ -33,6 +34,7 @@ function AppContent() {
           <Route path="/monthly" element={<MonthlyView />} />
           <Route path="/transactions" element={<TransactionsView />} />
           <Route path="/settings" element={<SettingsPage />} />
+          <Route path="/quick-add" element={<QuickAddPage />} />
         </Routes>
         <BottomNav />
       </div>

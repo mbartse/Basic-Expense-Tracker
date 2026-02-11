@@ -4,6 +4,7 @@ export interface Tag {
   id: string;
   name: string;
   color: string;         // Tailwind color class (e.g., 'teal-400')
+  lastUsedAt?: Timestamp; // When this tag was last used on an expense
 }
 
 export interface Expense {

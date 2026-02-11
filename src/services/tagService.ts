@@ -4,6 +4,7 @@ import {
   deleteDoc,
   doc,
   onSnapshot,
+  updateDoc,
   Timestamp,
 } from 'firebase/firestore';
 import { db } from './firebase';
@@ -13,7 +14,7 @@ function getUserTagsCollection(userId: string) {
   return collection(db, 'users', userId, 'tags');
 }
 
-const TAG_COLORS = [
+export const TAG_COLORS = [
   'teal-400',
   'purple-400',
   'pink-400',
@@ -41,6 +42,27 @@ export async function addTag(userId: string, name: string): Promise<string> {
 
   const docRef = await addDoc(getUserTagsCollection(userId), tagData);
   return docRef.id;
+}
+
+export async function updateTag(
+  userId: string,
+  tagId: string,
+  updates: { name?: string; color?: string }
+): Promise<void> {
+  const tagRef = doc(db, 'users', userId, 'tags', tagId);
+  await updateDoc(tagRef, updates);
+}
+
+export async function updateTagLastUsed(
+  userId: string,
+  tagIds: string[]
+): Promise<void> {
+  const now = Timestamp.now();
+  const updates = tagIds.map((tagId) => {
+    const tagRef = doc(db, 'users', userId, 'tags', tagId);
+    return updateDoc(tagRef, { lastUsedAt: now });
+  });
+  await Promise.all(updates);
 }
 
 export async function deleteTag(userId: string, id: string): Promise<void> {
