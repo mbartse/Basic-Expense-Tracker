@@ -11,14 +11,16 @@ import { WeekSummary } from '../components/summaries/WeekSummary';
 import { MonthSummary } from '../components/summaries/MonthSummary';
 import {
   useDateExpenses,
-  useWeekExpenses,
+  useDateRangeExpenses,
   useMonthExpenses,
   useExpenseActions,
 } from '../hooks/useExpenses';
 import { useTags } from '../hooks/useTags';
+import { useSettings } from '../contexts/SettingsContext';
 import {
   parseISO,
   getWeekStart,
+  getWeekEnd,
   getMonthStart,
   getPreviousDay,
   getNextDay,
@@ -33,6 +35,8 @@ export function DailyView() {
   const [showTags, setShowTags] = useState(false);
   const [editingExpense, setEditingExpense] = useState<Expense | undefined>();
 
+  const { settings } = useSettings();
+
   const currentDate = useMemo(() => {
     const dateParam = searchParams.get('date');
     if (dateParam) {
@@ -45,11 +49,12 @@ export function DailyView() {
     return new Date();
   }, [searchParams]);
 
-  const weekStart = useMemo(() => getWeekStart(currentDate), [currentDate]);
+  const weekStart = useMemo(() => getWeekStart(currentDate, settings.weekStartDay), [currentDate, settings.weekStartDay]);
+  const weekEnd = useMemo(() => getWeekEnd(currentDate, settings.weekStartDay), [currentDate, settings.weekStartDay]);
   const monthStart = useMemo(() => getMonthStart(currentDate), [currentDate]);
 
   const { expenses: dayExpenses, total: dayTotal, loading: dayLoading } = useDateExpenses(currentDate);
-  const { total: weekTotal } = useWeekExpenses(weekStart);
+  const { total: weekTotal } = useDateRangeExpenses(weekStart, weekEnd);
   const { total: monthTotal } = useMonthExpenses(monthStart);
   const { add, update, remove } = useExpenseActions();
   const { tags } = useTags();

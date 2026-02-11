@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom';
-import { CalendarDays, CalendarRange, Calendar, Receipt, LogOut } from 'lucide-react';
+import { CalendarDays, CalendarRange, Calendar, Receipt, Settings, LogOut } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
 const navItems = [
@@ -29,6 +29,17 @@ export function BottomNav() {
             <span className="text-xs mt-0.5">{label}</span>
           </NavLink>
         ))}
+        <NavLink
+          to="/settings"
+          className={({ isActive }) =>
+            `flex flex-col items-center justify-center w-full h-full transition-colors ${
+              isActive ? 'text-blue-400' : 'text-gray-400'
+            }`
+          }
+        >
+          <Settings className="w-5 h-5" />
+          <span className="text-xs mt-0.5">Settings</span>
+        </NavLink>
         <button
           onClick={signOut}
           className="flex flex-col items-center justify-center w-full h-full transition-colors text-gray-400 hover:text-red-400"

@@ -6,6 +6,7 @@ import { AddExpenseModal } from '../components/expenses/AddExpenseModal';
 import { AddExpenseButton } from '../components/expenses/AddExpenseButton';
 import { useMonthExpenses, useExpenseActions } from '../hooks/useExpenses';
 import { useTags } from '../hooks/useTags';
+import { useSettings } from '../contexts/SettingsContext';
 import { formatCurrency } from '../utils/formatters';
 import { getTagHexColor } from '../services/tagService';
 import {
@@ -20,7 +21,6 @@ import {
   getWeekKey,
 } from '../utils/dateUtils';
 import { calculateTotal } from '../services/expenseService';
-import { WEEKLY_BUDGET } from '../constants/config';
 
 export function MonthlyView() {
   const navigate = useNavigate();
@@ -32,23 +32,24 @@ export function MonthlyView() {
   const { groupedByDate, total, loading, expenses } = useMonthExpenses(monthStart);
   const { add } = useExpenseActions();
   const { tags } = useTags();
+  const { settings } = useSettings();
 
   const days = useMemo(() => getDaysInMonth(monthStart), [monthStart]);
 
   const weeklyBreakdown = useMemo(() => {
     return expenses.reduce((acc, expense) => {
-      const weekKey = expense.weekKey;
+      const weekKey = getWeekKey(expense.date.toDate(), settings.weekStartDay);
       if (!acc[weekKey]) {
         acc[weekKey] = 0;
       }
       acc[weekKey] += expense.amount;
       return acc;
     }, {} as Record<string, number>);
-  }, [expenses]);
+  }, [expenses, settings.weekStartDay]);
 
   const weeksInMonth = useMemo(() => {
-    return [...new Set(days.map((day) => getWeekKey(day)))];
-  }, [days]);
+    return [...new Set(days.map((day) => getWeekKey(day, settings.weekStartDay)))];
+  }, [days, settings.weekStartDay]);
 
   const tagTotals = useMemo(() => {
     if (expenses.length === 0) return [];
@@ -103,8 +104,17 @@ export function MonthlyView() {
 
   const startOffset = useMemo(() => {
     const firstDayOfWeek = monthStart.getDay();
-    return firstDayOfWeek === 0 ? 6 : firstDayOfWeek - 1;
-  }, [monthStart]);
+    // Calculate offset based on week start day setting
+    return (firstDayOfWeek - settings.weekStartDay + 7) % 7;
+  }, [monthStart, settings.weekStartDay]);
+
+  const orderedDayNames = useMemo(() => {
+    const shortNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    return [
+      ...shortNames.slice(settings.weekStartDay),
+      ...shortNames.slice(0, settings.weekStartDay),
+    ];
+  }, [settings.weekStartDay]);
 
   return (
     <div className="min-h-screen bg-gray-900 pt-14 pb-8">
@@ -187,7 +197,7 @@ export function MonthlyView() {
           <div className="divide-y divide-gray-700">
             {weeksInMonth.map((weekKey, index) => {
               const weekTotal = weeklyBreakdown[weekKey] || 0;
-              const isOverBudget = weekTotal > WEEKLY_BUDGET;
+              const isOverBudget = weekTotal > settings.weeklyBudget;
               return (
                 <div
                   key={weekKey}
@@ -216,7 +226,7 @@ export function MonthlyView() {
             </div>
 
             <div className="grid grid-cols-7 border-b border-gray-700">
-              {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day) => (
+              {orderedDayNames.map((day) => (
                 <div
                   key={day}
                   className="text-center text-xs text-gray-400 py-2 font-medium"

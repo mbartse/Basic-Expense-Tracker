@@ -6,11 +6,13 @@ import { BudgetIndicator } from '../components/summaries/BudgetIndicator';
 import { AddExpenseModal } from '../components/expenses/AddExpenseModal';
 import { AddExpenseButton } from '../components/expenses/AddExpenseButton';
 import { ExpenseItem } from '../components/expenses/ExpenseItem';
-import { useWeekExpenses, useExpenseActions } from '../hooks/useExpenses';
+import { useDateRangeExpenses, useExpenseActions } from '../hooks/useExpenses';
 import { useTags } from '../hooks/useTags';
+import { useSettings } from '../contexts/SettingsContext';
 import { formatCurrency } from '../utils/formatters';
 import {
   getWeekStart,
+  getWeekEnd,
   getDaysInWeek,
   getPreviousWeek,
   getNextWeek,
@@ -23,6 +25,7 @@ import {
 import { calculateTotal } from '../services/expenseService';
 import type { Expense, ExpenseInput } from '../types/expense';
 
+
 export function WeeklyView() {
   const navigate = useNavigate();
   const [currentDate, setCurrentDate] = useState(() => new Date());
@@ -30,12 +33,25 @@ export function WeeklyView() {
   const [showTags, setShowTags] = useState(false);
   const [editingExpense, setEditingExpense] = useState<Expense | undefined>();
 
-  const weekStart = useMemo(() => getWeekStart(currentDate), [currentDate]);
-  const { groupedByDate, total, loading, expenses } = useWeekExpenses(weekStart);
+  const { settings } = useSettings();
+  const weekStart = useMemo(() => getWeekStart(currentDate, settings.weekStartDay), [currentDate, settings.weekStartDay]);
+  const weekEnd = useMemo(() => getWeekEnd(currentDate, settings.weekStartDay), [currentDate, settings.weekStartDay]);
+  const { expenses, total, loading } = useDateRangeExpenses(weekStart, weekEnd);
   const { add, update, remove } = useExpenseActions();
   const { tags } = useTags();
 
-  const days = useMemo(() => getDaysInWeek(weekStart), [weekStart]);
+  const days = useMemo(() => getDaysInWeek(weekStart, settings.weekStartDay), [weekStart, settings.weekStartDay]);
+
+  const groupedByDate = useMemo(() => {
+    return expenses.reduce((acc, expense) => {
+      const dateStr = expense.dateString;
+      if (!acc[dateStr]) {
+        acc[dateStr] = [];
+      }
+      acc[dateStr].push(expense);
+      return acc;
+    }, {} as Record<string, Expense[]>);
+  }, [expenses]);
 
   const handlePrevious = () => setCurrentDate(prev => getPreviousWeek(prev));
   const handleNext = () => setCurrentDate(prev => getNextWeek(prev));
@@ -62,7 +78,7 @@ export function WeeklyView() {
   return (
     <div className="min-h-screen bg-gray-900 pt-14 pb-8">
       <DateNavigator
-        label={formatWeekRange(weekStart)}
+        label={formatWeekRange(weekStart, settings.weekStartDay)}
         onPrevious={handlePrevious}
         onNext={handleNext}
         onToday={handleToday}

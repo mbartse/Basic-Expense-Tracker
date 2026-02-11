@@ -3,9 +3,11 @@ import { DailyView } from './pages/DailyView';
 import { WeeklyView } from './pages/WeeklyView';
 import { MonthlyView } from './pages/MonthlyView';
 import { TransactionsView } from './pages/TransactionsView';
+import { SettingsPage } from './pages/SettingsPage';
 import { LoginPage } from './pages/LoginPage';
 import { BottomNav } from './components/navigation/BottomNav';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { SettingsProvider } from './contexts/SettingsContext';
 
 function AppContent() {
   const { user, loading } = useAuth();
@@ -30,6 +32,7 @@ function AppContent() {
           <Route path="/weekly" element={<WeeklyView />} />
           <Route path="/monthly" element={<MonthlyView />} />
           <Route path="/transactions" element={<TransactionsView />} />
+          <Route path="/settings" element={<SettingsPage />} />
         </Routes>
         <BottomNav />
       </div>
@@ -40,7 +43,9 @@ function AppContent() {
 function App() {
   return (
     <AuthProvider>
-      <AppContent />
+      <SettingsProvider>
+        <AppContent />
+      </SettingsProvider>
     </AuthProvider>
   );
 }

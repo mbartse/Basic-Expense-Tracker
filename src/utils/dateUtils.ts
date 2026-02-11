@@ -4,8 +4,8 @@ import {
   startOfMonth,
   endOfMonth,
   format,
-  getISOWeek,
-  getYear,
+  getWeek,
+  getWeekYear,
   addDays,
   subDays,
   addWeeks,
@@ -19,8 +19,16 @@ import {
 } from 'date-fns';
 import { WEEK_START_DAY } from '../constants/config';
 
-// Week options for date-fns
-const weekOptions = { weekStartsOn: WEEK_START_DAY as 0 | 1 | 2 | 3 | 4 | 5 | 6 };
+type WeekStartDay = 0 | 1 | 2 | 3 | 4 | 5 | 6;
+
+// Default week options for date-fns
+const defaultWeekOptions = { weekStartsOn: WEEK_START_DAY as WeekStartDay };
+
+function getWeekOptions(weekStartDay?: WeekStartDay) {
+  return weekStartDay !== undefined
+    ? { weekStartsOn: weekStartDay }
+    : defaultWeekOptions;
+}
 
 /**
  * Get the date string for a date (YYYY-MM-DD)
@@ -30,11 +38,12 @@ export function getDateString(date: Date): string {
 }
 
 /**
- * Get the ISO week key for a date (YYYY-Www)
+ * Get the week key for a date (YYYY-Www)
  */
-export function getWeekKey(date: Date): string {
-  const year = getYear(startOfWeek(date, weekOptions));
-  const week = getISOWeek(date);
+export function getWeekKey(date: Date, weekStartDay?: WeekStartDay): string {
+  const options = getWeekOptions(weekStartDay);
+  const year = getWeekYear(date, options);
+  const week = getWeek(date, options);
   return `${year}-W${week.toString().padStart(2, '0')}`;
 }
 
@@ -48,24 +57,24 @@ export function getMonthKey(date: Date): string {
 /**
  * Get the start of the week for a date
  */
-export function getWeekStart(date: Date): Date {
-  return startOfWeek(date, weekOptions);
+export function getWeekStart(date: Date, weekStartDay?: WeekStartDay): Date {
+  return startOfWeek(date, getWeekOptions(weekStartDay));
 }
 
 /**
  * Get the end of the week for a date
  */
-export function getWeekEnd(date: Date): Date {
-  return endOfWeek(date, weekOptions);
+export function getWeekEnd(date: Date, weekStartDay?: WeekStartDay): Date {
+  return endOfWeek(date, getWeekOptions(weekStartDay));
 }
 
 /**
  * Get all days in a week
  */
-export function getDaysInWeek(weekStart: Date): Date[] {
+export function getDaysInWeek(weekStart: Date, weekStartDay?: WeekStartDay): Date[] {
   return eachDayOfInterval({
     start: weekStart,
-    end: endOfWeek(weekStart, weekOptions),
+    end: endOfWeek(weekStart, getWeekOptions(weekStartDay)),
   });
 }
 
@@ -133,8 +142,8 @@ export function getNextMonth(date: Date): Date {
  * Format a week range for display
  * e.g., "Jan 13 - Jan 19, 2026"
  */
-export function formatWeekRange(weekStart: Date): string {
-  const weekEnd = endOfWeek(weekStart, weekOptions);
+export function formatWeekRange(weekStart: Date, weekStartDay?: WeekStartDay): string {
+  const weekEnd = endOfWeek(weekStart, getWeekOptions(weekStartDay));
   const startMonth = format(weekStart, 'MMM d');
   const endMonth = format(weekEnd, 'MMM d, yyyy');
   return `${startMonth} - ${endMonth}`;

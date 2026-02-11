@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { formatCurrency } from '../../utils/formatters';
-import { WEEKLY_BUDGET } from '../../constants/config';
+import { useSettings } from '../../contexts/SettingsContext';
 import { getTagHexColor } from '../../services/tagService';
 import type { Expense, Tag } from '../../types/expense';
 
@@ -23,12 +23,14 @@ interface BudgetIndicatorProps {
 
 export function BudgetIndicator({
   spent,
-  budget = WEEKLY_BUDGET,
+  budget: budgetProp,
   label = 'Week Budget',
   expenses = [],
   tags = [],
   showTagBreakdown = false,
 }: BudgetIndicatorProps) {
+  const { settings } = useSettings();
+  const budget = budgetProp ?? settings.weeklyBudget;
   const [isExpanded, setIsExpanded] = useState(false);
 
   const percentage = Math.min((spent / budget) * 100, 100);

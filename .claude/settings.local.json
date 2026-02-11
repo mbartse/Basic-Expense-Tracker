@@ -17,7 +17,8 @@
       "Bash(del \"C:\\\\Users\\\\bartm\\\\Documents\\\\ClaudeProjects\\\\expense-tracker\\\\src\\\\services\\\\bankService.ts\")",
       "Bash(del \"C:\\\\Users\\\\bartm\\\\Documents\\\\ClaudeProjects\\\\expense-tracker\\\\src\\\\hooks\\\\useBanks.ts\")",
       "Bash(del \"C:\\\\Users\\\\bartm\\\\Documents\\\\ClaudeProjects\\\\expense-tracker\\\\src\\\\pages\\\\BankView.tsx\")",
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "Bash(npx firebase deploy:*)"
     ]
   }
 }
