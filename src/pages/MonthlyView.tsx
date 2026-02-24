@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { DateNavigator } from '../components/navigation/DateNavigator';
 import { AddExpenseModal } from '../components/expenses/AddExpenseModal';
@@ -22,16 +22,21 @@ import {
 } from '../utils/dateUtils';
 import { calculateTotal } from '../services/expenseService';
 
-export function MonthlyView() {
-  const navigate = useNavigate();
+interface MonthlyViewProps {
+  friendUid?: string;
+  isViewingFriend: boolean;
+}
+
+export function MonthlyView({ friendUid, isViewingFriend }: MonthlyViewProps) {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [currentDate, setCurrentDate] = useState(() => new Date());
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isTagBreakdownExpanded, setIsTagBreakdownExpanded] = useState(false);
 
   const monthStart = useMemo(() => getMonthStart(currentDate), [currentDate]);
-  const { groupedByDate, total, loading, expenses } = useMonthExpenses(monthStart);
+  const { groupedByDate, total, loading, expenses } = useMonthExpenses(monthStart, friendUid);
   const { add } = useExpenseActions();
-  const { tags } = useTags();
+  const { tags } = useTags(friendUid);
   const { settings } = useSettings();
 
   const days = useMemo(() => getDaysInMonth(monthStart), [monthStart]);
@@ -99,12 +104,14 @@ export function MonthlyView() {
   const handleToday = () => setCurrentDate(new Date());
 
   const handleDayClick = useCallback((date: Date) => {
-    navigate(`/?date=${getDateString(date)}`);
-  }, [navigate]);
+    const params = new URLSearchParams(searchParams);
+    params.set('date', getDateString(date));
+    params.delete('view');
+    setSearchParams(params);
+  }, [searchParams, setSearchParams]);
 
   const startOffset = useMemo(() => {
     const firstDayOfWeek = monthStart.getDay();
-    // Calculate offset based on week start day setting
     return (firstDayOfWeek - settings.weekStartDay + 7) % 7;
   }, [monthStart, settings.weekStartDay]);
 
@@ -117,7 +124,7 @@ export function MonthlyView() {
   }, [settings.weekStartDay]);
 
   return (
-    <div className="min-h-screen bg-gray-900 pt-14 pb-8">
+    <>
       <DateNavigator
         label={formatMonth(monthStart)}
         onPrevious={handlePrevious}
@@ -277,13 +284,17 @@ export function MonthlyView() {
         )}
       </main>
 
-      <AddExpenseButton onClick={() => setIsModalOpen(true)} />
+      {!isViewingFriend && (
+        <>
+          <AddExpenseButton onClick={() => setIsModalOpen(true)} />
 
-      <AddExpenseModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        onSubmit={add}
-      />
-    </div>
+          <AddExpenseModal
+            isOpen={isModalOpen}
+            onClose={() => setIsModalOpen(false)}
+            onSubmit={add}
+          />
+        </>
+      )}
+    </>
   );
 }

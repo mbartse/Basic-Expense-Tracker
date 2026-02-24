@@ -29,7 +29,12 @@ import {
 } from '../utils/dateUtils';
 import type { Expense, ExpenseInput } from '../types/expense';
 
-export function DailyView() {
+interface DailyViewProps {
+  friendUid?: string;
+  isViewingFriend: boolean;
+}
+
+export function DailyView({ friendUid, isViewingFriend }: DailyViewProps) {
   const [searchParams, setSearchParams] = useSearchParams();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [showTags, setShowTags] = useState(false);
@@ -53,21 +58,23 @@ export function DailyView() {
   const weekEnd = useMemo(() => getWeekEnd(currentDate, settings.weekStartDay), [currentDate, settings.weekStartDay]);
   const monthStart = useMemo(() => getMonthStart(currentDate), [currentDate]);
 
-  const { expenses: dayExpenses, total: dayTotal, loading: dayLoading } = useDateExpenses(currentDate);
-  const { total: weekTotal } = useDateRangeExpenses(weekStart, weekEnd);
-  const { total: monthTotal } = useMonthExpenses(monthStart);
+  const { expenses: dayExpenses, total: dayTotal, loading: dayLoading } = useDateExpenses(currentDate, friendUid);
+  const { total: weekTotal } = useDateRangeExpenses(weekStart, weekEnd, friendUid);
+  const { total: monthTotal } = useMonthExpenses(monthStart, friendUid);
   const { add, update, remove } = useExpenseActions();
-  const { tags } = useTags();
+  const { tags } = useTags(friendUid);
 
   const isTodayDate = isToday(currentDate);
 
   const setCurrentDate = useCallback((date: Date) => {
-    if (isToday(date)) {
-      setSearchParams({});
+    const params = new URLSearchParams(searchParams);
+    if (!isToday(date)) {
+      params.set('date', getDateString(date));
     } else {
-      setSearchParams({ date: getDateString(date) });
+      params.delete('date');
     }
-  }, [setSearchParams]);
+    setSearchParams(params);
+  }, [setSearchParams, searchParams]);
 
   const handlePrevious = () => setCurrentDate(getPreviousDay(currentDate));
   const handleNext = () => setCurrentDate(getNextDay(currentDate));
@@ -95,7 +102,7 @@ export function DailyView() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gray-900 pt-14 pb-8">
+    <>
       <DateNavigator
         label={formatDateFull(currentDate)}
         onPrevious={handlePrevious}
@@ -129,8 +136,8 @@ export function DailyView() {
             <ExpenseList
               expenses={dayExpenses}
               total={dayTotal}
-              onDelete={remove}
-              onEdit={handleEdit}
+              onDelete={isViewingFriend ? undefined : remove}
+              onEdit={isViewingFriend ? undefined : handleEdit}
               showTags={showTags}
               tags={tags}
               emptyMessage={isTodayDate ? 'No expenses today' : 'No expenses on this day'}
@@ -145,15 +152,19 @@ export function DailyView() {
         </section>
       </main>
 
-      <AddExpenseButton onClick={() => setIsModalOpen(true)} />
+      {!isViewingFriend && (
+        <>
+          <AddExpenseButton onClick={() => setIsModalOpen(true)} />
 
-      <AddExpenseModal
-        isOpen={isModalOpen}
-        onClose={handleCloseModal}
-        onSubmit={handleAdd}
-        editingExpense={editingExpense}
-        onUpdate={handleUpdate}
-      />
-    </div>
+          <AddExpenseModal
+            isOpen={isModalOpen}
+            onClose={handleCloseModal}
+            onSubmit={handleAdd}
+            editingExpense={editingExpense}
+            onUpdate={handleUpdate}
+          />
+        </>
+      )}
+    </>
   );
 }

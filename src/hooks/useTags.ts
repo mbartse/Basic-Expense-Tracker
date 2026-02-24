@@ -8,25 +8,27 @@ import {
 } from '../services/tagService';
 import { useAuth } from '../contexts/AuthContext';
 
-export function useTags() {
+export function useTags(overrideUserId?: string) {
   const { user } = useAuth();
   const [tags, setTags] = useState<Tag[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const userId = overrideUserId || user?.uid;
+
   useEffect(() => {
-    if (!user) {
+    if (!userId) {
       setTags([]);
       setLoading(false);
       return;
     }
 
-    const unsubscribe = subscribeToTags(user.uid, (data) => {
+    const unsubscribe = subscribeToTags(userId, (data) => {
       setTags(data);
       setLoading(false);
     });
 
     return unsubscribe;
-  }, [user]);
+  }, [userId]);
 
   const addTag = useCallback(async (name: string) => {
     if (!user) {

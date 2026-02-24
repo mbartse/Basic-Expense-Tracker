@@ -1,10 +1,8 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import { DailyView } from './pages/DailyView';
-import { WeeklyView } from './pages/WeeklyView';
-import { MonthlyView } from './pages/MonthlyView';
-import { TransactionsView } from './pages/TransactionsView';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { ExpensesPage } from './pages/ExpensesPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { QuickAddPage } from './pages/QuickAddPage';
+import { FriendsPage } from './pages/FriendsPage';
 import { LoginPage } from './pages/LoginPage';
 import { BottomNav } from './components/navigation/BottomNav';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
@@ -29,12 +27,11 @@ function AppContent() {
     <BrowserRouter>
       <div className="min-h-screen bg-gray-50">
         <Routes>
-          <Route path="/" element={<DailyView />} />
-          <Route path="/weekly" element={<WeeklyView />} />
-          <Route path="/monthly" element={<MonthlyView />} />
-          <Route path="/transactions" element={<TransactionsView />} />
+          <Route path="/expenses" element={<ExpensesPage />} />
+          <Route path="/friends" element={<FriendsPage />} />
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="/quick-add" element={<QuickAddPage />} />
+          <Route path="*" element={<Navigate to="/expenses" replace />} />
         </Routes>
         <BottomNav />
       </div>

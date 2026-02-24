@@ -16,26 +16,28 @@ import { useAuth } from '../contexts/AuthContext';
 /**
  * Hook for today's expenses
  */
-export function useTodayExpenses() {
+export function useTodayExpenses(overrideUserId?: string) {
   const { user } = useAuth();
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const userId = overrideUserId || user?.uid;
+
   useEffect(() => {
-    if (!user) {
+    if (!userId) {
       setExpenses([]);
       setLoading(false);
       return;
     }
 
     const today = getDateString(new Date());
-    const unsubscribe = subscribeToDateExpenses(user.uid, today, (data) => {
+    const unsubscribe = subscribeToDateExpenses(userId, today, (data) => {
       setExpenses(data);
       setLoading(false);
     });
 
     return unsubscribe;
-  }, [user]);
+  }, [userId]);
 
   const total = calculateTotal(expenses);
 
@@ -45,28 +47,29 @@ export function useTodayExpenses() {
 /**
  * Hook for expenses on a specific date
  */
-export function useDateExpenses(date: Date) {
+export function useDateExpenses(date: Date, overrideUserId?: string) {
   const { user } = useAuth();
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const userId = overrideUserId || user?.uid;
   const dateString = useMemo(() => getDateString(date), [date.getTime()]);
 
   useEffect(() => {
-    if (!user) {
+    if (!userId) {
       setExpenses([]);
       setLoading(false);
       return;
     }
 
     setLoading(true);
-    const unsubscribe = subscribeToDateExpenses(user.uid, dateString, (data) => {
+    const unsubscribe = subscribeToDateExpenses(userId, dateString, (data) => {
       setExpenses(data);
       setLoading(false);
     });
 
     return unsubscribe;
-  }, [user, dateString]);
+  }, [userId, dateString]);
 
   const total = calculateTotal(expenses);
 
@@ -76,26 +79,28 @@ export function useDateExpenses(date: Date) {
 /**
  * Hook for current week's expenses
  */
-export function useCurrentWeekExpenses() {
+export function useCurrentWeekExpenses(overrideUserId?: string) {
   const { user } = useAuth();
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const userId = overrideUserId || user?.uid;
+
   useEffect(() => {
-    if (!user) {
+    if (!userId) {
       setExpenses([]);
       setLoading(false);
       return;
     }
 
     const weekKey = getWeekKey(new Date());
-    const unsubscribe = subscribeToWeekExpenses(user.uid, weekKey, (data) => {
+    const unsubscribe = subscribeToWeekExpenses(userId, weekKey, (data) => {
       setExpenses(data);
       setLoading(false);
     });
 
     return unsubscribe;
-  }, [user]);
+  }, [userId]);
 
   const total = calculateTotal(expenses);
 
@@ -105,28 +110,29 @@ export function useCurrentWeekExpenses() {
 /**
  * Hook for a specific week's expenses
  */
-export function useWeekExpenses(weekStart: Date) {
+export function useWeekExpenses(weekStart: Date, overrideUserId?: string) {
   const { user } = useAuth();
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const userId = overrideUserId || user?.uid;
   const weekKey = useMemo(() => getWeekKey(weekStart), [weekStart.getTime()]);
 
   useEffect(() => {
-    if (!user) {
+    if (!userId) {
       setExpenses([]);
       setLoading(false);
       return;
     }
 
     setLoading(true);
-    const unsubscribe = subscribeToWeekExpenses(user.uid, weekKey, (data) => {
+    const unsubscribe = subscribeToWeekExpenses(userId, weekKey, (data) => {
       setExpenses(data);
       setLoading(false);
     });
 
     return unsubscribe;
-  }, [user, weekKey]);
+  }, [userId, weekKey]);
 
   const total = calculateTotal(expenses);
 
@@ -148,26 +154,28 @@ export function useWeekExpenses(weekStart: Date) {
 /**
  * Hook for current month's expenses
  */
-export function useCurrentMonthExpenses() {
+export function useCurrentMonthExpenses(overrideUserId?: string) {
   const { user } = useAuth();
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const userId = overrideUserId || user?.uid;
+
   useEffect(() => {
-    if (!user) {
+    if (!userId) {
       setExpenses([]);
       setLoading(false);
       return;
     }
 
     const monthKey = getMonthKey(new Date());
-    const unsubscribe = subscribeToMonthExpenses(user.uid, monthKey, (data) => {
+    const unsubscribe = subscribeToMonthExpenses(userId, monthKey, (data) => {
       setExpenses(data);
       setLoading(false);
     });
 
     return unsubscribe;
-  }, [user]);
+  }, [userId]);
 
   const total = calculateTotal(expenses);
 
@@ -177,28 +185,29 @@ export function useCurrentMonthExpenses() {
 /**
  * Hook for a specific month's expenses
  */
-export function useMonthExpenses(monthStart: Date) {
+export function useMonthExpenses(monthStart: Date, overrideUserId?: string) {
   const { user } = useAuth();
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const userId = overrideUserId || user?.uid;
   const monthKey = useMemo(() => getMonthKey(monthStart), [monthStart.getTime()]);
 
   useEffect(() => {
-    if (!user) {
+    if (!userId) {
       setExpenses([]);
       setLoading(false);
       return;
     }
 
     setLoading(true);
-    const unsubscribe = subscribeToMonthExpenses(user.uid, monthKey, (data) => {
+    const unsubscribe = subscribeToMonthExpenses(userId, monthKey, (data) => {
       setExpenses(data);
       setLoading(false);
     });
 
     return unsubscribe;
-  }, [user, monthKey]);
+  }, [userId, monthKey]);
 
   const total = calculateTotal(expenses);
 
@@ -273,16 +282,17 @@ export function useExpenseActions() {
 /**
  * Hook for expenses within a date range
  */
-export function useDateRangeExpenses(startDate: Date, endDate: Date) {
+export function useDateRangeExpenses(startDate: Date, endDate: Date, overrideUserId?: string) {
   const { user } = useAuth();
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const userId = overrideUserId || user?.uid;
   const startDateString = useMemo(() => getDateString(startDate), [startDate.getTime()]);
   const endDateString = useMemo(() => getDateString(endDate), [endDate.getTime()]);
 
   useEffect(() => {
-    if (!user) {
+    if (!userId) {
       setExpenses([]);
       setLoading(false);
       return;
@@ -290,7 +300,7 @@ export function useDateRangeExpenses(startDate: Date, endDate: Date) {
 
     setLoading(true);
     const unsubscribe = subscribeToDateRangeExpenses(
-      user.uid,
+      userId,
       startDateString,
       endDateString,
       (data) => {
@@ -300,7 +310,7 @@ export function useDateRangeExpenses(startDate: Date, endDate: Date) {
     );
 
     return unsubscribe;
-  }, [user, startDateString, endDateString]);
+  }, [userId, startDateString, endDateString]);
 
   const total = calculateTotal(expenses);
 

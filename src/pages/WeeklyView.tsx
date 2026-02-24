@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import { Tag as TagIcon } from 'lucide-react';
 import { DateNavigator } from '../components/navigation/DateNavigator';
 import { BudgetIndicator } from '../components/summaries/BudgetIndicator';
@@ -25,20 +25,25 @@ import {
 import { calculateTotal } from '../services/expenseService';
 import type { Expense, ExpenseInput } from '../types/expense';
 
+interface WeeklyViewProps {
+  friendUid?: string;
+  isViewingFriend: boolean;
+}
 
-export function WeeklyView() {
-  const navigate = useNavigate();
+export function WeeklyView({ friendUid, isViewingFriend }: WeeklyViewProps) {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [currentDate, setCurrentDate] = useState(() => new Date());
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [showTags, setShowTags] = useState(false);
   const [editingExpense, setEditingExpense] = useState<Expense | undefined>();
 
   const { settings } = useSettings();
+
   const weekStart = useMemo(() => getWeekStart(currentDate, settings.weekStartDay), [currentDate, settings.weekStartDay]);
   const weekEnd = useMemo(() => getWeekEnd(currentDate, settings.weekStartDay), [currentDate, settings.weekStartDay]);
-  const { expenses, total, loading } = useDateRangeExpenses(weekStart, weekEnd);
+  const { expenses, total, loading } = useDateRangeExpenses(weekStart, weekEnd, friendUid);
   const { add, update, remove } = useExpenseActions();
-  const { tags } = useTags();
+  const { tags } = useTags(friendUid);
 
   const days = useMemo(() => getDaysInWeek(weekStart, settings.weekStartDay), [weekStart, settings.weekStartDay]);
 
@@ -58,8 +63,11 @@ export function WeeklyView() {
   const handleToday = () => setCurrentDate(new Date());
 
   const handleDayClick = useCallback((date: Date) => {
-    navigate(`/?date=${getDateString(date)}`);
-  }, [navigate]);
+    const params = new URLSearchParams(searchParams);
+    params.set('date', getDateString(date));
+    params.delete('view');
+    setSearchParams(params);
+  }, [searchParams, setSearchParams]);
 
   const handleEdit = useCallback((expense: Expense) => {
     setEditingExpense(expense);
@@ -76,7 +84,7 @@ export function WeeklyView() {
   }, [update]);
 
   return (
-    <div className="min-h-screen bg-gray-900 pt-14 pb-8">
+    <>
       <DateNavigator
         label={formatWeekRange(weekStart, settings.weekStartDay)}
         onPrevious={handlePrevious}
@@ -169,8 +177,8 @@ export function WeeklyView() {
                                 key={expense.id}
                                 expense={expense}
                                 compact
-                                onDelete={remove}
-                                onEdit={handleEdit}
+                                onDelete={isViewingFriend ? undefined : remove}
+                                onEdit={isViewingFriend ? undefined : handleEdit}
                                 showTags={showTags}
                                 tags={tags}
                               />
@@ -187,15 +195,19 @@ export function WeeklyView() {
         )}
       </main>
 
-      <AddExpenseButton onClick={() => setIsModalOpen(true)} />
+      {!isViewingFriend && (
+        <>
+          <AddExpenseButton onClick={() => setIsModalOpen(true)} />
 
-      <AddExpenseModal
-        isOpen={isModalOpen}
-        onClose={handleCloseModal}
-        onSubmit={add}
-        editingExpense={editingExpense}
-        onUpdate={handleUpdate}
-      />
-    </div>
+          <AddExpenseModal
+            isOpen={isModalOpen}
+            onClose={handleCloseModal}
+            onSubmit={add}
+            editingExpense={editingExpense}
+            onUpdate={handleUpdate}
+          />
+        </>
+      )}
+    </>
   );
 }

@@ -10,7 +10,12 @@ import { getTagHexColor } from '../services/tagService';
 import { getDateString } from '../utils/dateUtils';
 import type { Expense, ExpenseInput } from '../types/expense';
 
-export function TransactionsView() {
+interface TransactionsViewProps {
+  friendUid?: string;
+  isViewingFriend: boolean;
+}
+
+export function TransactionsView({ friendUid, isViewingFriend }: TransactionsViewProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
   const [sortNewestFirst, setSortNewestFirst] = useState(true);
@@ -23,8 +28,8 @@ export function TransactionsView() {
   const [startDate, setStartDate] = useState(defaultStartDate);
   const [endDate, setEndDate] = useState(defaultEndDate);
 
-  const { tags, loading: tagsLoading } = useTags();
-  const { expenses: allExpenses, loading: expensesLoading, total: allTotal } = useDateRangeExpenses(startDate, endDate);
+  const { tags, loading: tagsLoading } = useTags(friendUid);
+  const { expenses: allExpenses, loading: expensesLoading, total: allTotal } = useDateRangeExpenses(startDate, endDate, friendUid);
   const { add, update, remove } = useExpenseActions();
 
   const toggleTag = (tagId: string) => {
@@ -85,7 +90,7 @@ export function TransactionsView() {
   const loading = tagsLoading || expensesLoading;
 
   return (
-    <div className="min-h-screen bg-gray-900 pt-20 pb-8">
+    <>
       <header className="bg-gray-800 border-b border-gray-700 px-4 py-4">
         <div className="flex items-center gap-2">
           <Receipt className="w-5 h-5 text-blue-400" />
@@ -200,8 +205,8 @@ export function TransactionsView() {
             <ExpenseList
               expenses={filteredExpenses}
               total={filteredTotal}
-              onDelete={remove}
-              onEdit={handleEdit}
+              onDelete={isViewingFriend ? undefined : remove}
+              onEdit={isViewingFriend ? undefined : handleEdit}
               showDate
               showTags
               tags={tags}
@@ -215,15 +220,19 @@ export function TransactionsView() {
         </section>
       </main>
 
-      <AddExpenseButton onClick={() => setIsModalOpen(true)} />
+      {!isViewingFriend && (
+        <>
+          <AddExpenseButton onClick={() => setIsModalOpen(true)} />
 
-      <AddExpenseModal
-        isOpen={isModalOpen}
-        onClose={handleCloseModal}
-        onSubmit={add}
-        editingExpense={editingExpense}
-        onUpdate={handleUpdate}
-      />
-    </div>
+          <AddExpenseModal
+            isOpen={isModalOpen}
+            onClose={handleCloseModal}
+            onSubmit={add}
+            editingExpense={editingExpense}
+            onUpdate={handleUpdate}
+          />
+        </>
+      )}
+    </>
   );
 }

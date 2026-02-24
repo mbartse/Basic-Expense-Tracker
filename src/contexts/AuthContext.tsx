@@ -7,6 +7,7 @@ import {
 } from 'firebase/auth';
 import type { User } from 'firebase/auth';
 import { auth, googleProvider } from '../services/firebase';
+import { upsertUserProfile } from '../services/userProfileService';
 
 interface AuthContextType {
   user: User | null;
@@ -37,6 +38,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setUser(user);
       setLoading(false);
+      if (user) {
+        upsertUserProfile(user).catch(console.error);
+      }
     });
 
     return unsubscribe;
