@@ -3,7 +3,8 @@ import { Timestamp } from 'firebase/firestore';
 export interface Tag {
   id: string;
   name: string;
-  color: string;         // Tailwind color class (e.g., 'teal-400')
+  color: string;          // Tailwind color class (e.g., 'teal-400')
+  freeSpend?: boolean;    // If true, expenses with this tag are excluded from weekly/monthly totals
   lastUsedAt?: Timestamp; // When this tag was last used on an expense
 }
 

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Check, X } from 'lucide-react';
 import { useExpenseActions } from '../hooks/useExpenses';
@@ -13,6 +13,7 @@ export function QuickAddPage() {
   const { tags, loading: tagsLoading } = useTags();
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
   const [message, setMessage] = useState('');
+  const hasRun = useRef(false);
 
   const amount = searchParams.get('amount');
   const name = searchParams.get('name');
@@ -20,6 +21,8 @@ export function QuickAddPage() {
 
   useEffect(() => {
     if (authLoading || tagsLoading) return;
+    if (hasRun.current) return;
+    hasRun.current = true;
 
     if (!user) {
       setStatus('error');
@@ -33,7 +36,8 @@ export function QuickAddPage() {
       return;
     }
 
-    const amountCents = Math.round(parseFloat(amount) * 100);
+    const cleanAmount = amount.replace(/[^0-9.]/g, '');
+    const amountCents = Math.round(parseFloat(cleanAmount) * 100);
     if (isNaN(amountCents) || amountCents <= 0) {
       setStatus('error');
       setMessage('Invalid amount');
@@ -59,7 +63,7 @@ export function QuickAddPage() {
     })
       .then(() => {
         setStatus('success');
-        setMessage(`Added: ${name} - $${amount}`);
+        setMessage(`Added: ${name} - $${cleanAmount}`);
       })
       .catch((err) => {
         setStatus('error');

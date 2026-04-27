@@ -22,7 +22,7 @@ import {
   getDayNumber,
   isToday,
 } from '../utils/dateUtils';
-import { calculateTotal } from '../services/expenseService';
+import { calculateTotal, calculateBudgetTotal } from '../services/expenseService';
 import type { Expense, ExpenseInput } from '../types/expense';
 
 interface WeeklyViewProps {
@@ -41,9 +41,11 @@ export function WeeklyView({ friendUid, isViewingFriend }: WeeklyViewProps) {
 
   const weekStart = useMemo(() => getWeekStart(currentDate, settings.weekStartDay), [currentDate, settings.weekStartDay]);
   const weekEnd = useMemo(() => getWeekEnd(currentDate, settings.weekStartDay), [currentDate, settings.weekStartDay]);
-  const { expenses, total, loading } = useDateRangeExpenses(weekStart, weekEnd, friendUid);
+  const { expenses, loading } = useDateRangeExpenses(weekStart, weekEnd, friendUid);
   const { add, update, remove } = useExpenseActions();
   const { tags } = useTags(friendUid);
+
+  const budgetTotal = useMemo(() => calculateBudgetTotal(expenses, tags), [expenses, tags]);
 
   const days = useMemo(() => getDaysInWeek(weekStart, settings.weekStartDay), [weekStart, settings.weekStartDay]);
 
@@ -94,7 +96,7 @@ export function WeeklyView({ friendUid, isViewingFriend }: WeeklyViewProps) {
 
       <main className="p-4 space-y-4">
         <BudgetIndicator
-          spent={total}
+          spent={budgetTotal}
           expenses={expenses}
           tags={tags}
           showTagBreakdown
@@ -116,7 +118,7 @@ export function WeeklyView({ friendUid, isViewingFriend }: WeeklyViewProps) {
                 Tags
               </button>
               <span className="text-2xl font-bold text-gray-100">
-                {formatCurrency(total)}
+                {formatCurrency(budgetTotal)}
               </span>
             </div>
           </div>

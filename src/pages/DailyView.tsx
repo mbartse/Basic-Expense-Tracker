@@ -27,6 +27,7 @@ import {
   getDateString,
   isToday,
 } from '../utils/dateUtils';
+import { calculateBudgetTotal } from '../services/expenseService';
 import type { Expense, ExpenseInput } from '../types/expense';
 
 interface DailyViewProps {
@@ -59,10 +60,13 @@ export function DailyView({ friendUid, isViewingFriend }: DailyViewProps) {
   const monthStart = useMemo(() => getMonthStart(currentDate), [currentDate]);
 
   const { expenses: dayExpenses, total: dayTotal, loading: dayLoading } = useDateExpenses(currentDate, friendUid);
-  const { total: weekTotal } = useDateRangeExpenses(weekStart, weekEnd, friendUid);
-  const { total: monthTotal } = useMonthExpenses(monthStart, friendUid);
+  const { expenses: weekExpenses } = useDateRangeExpenses(weekStart, weekEnd, friendUid);
+  const { expenses: monthExpenses } = useMonthExpenses(monthStart, friendUid);
   const { add, update, remove } = useExpenseActions();
   const { tags } = useTags(friendUid);
+
+  const weekBudgetTotal = useMemo(() => calculateBudgetTotal(weekExpenses, tags), [weekExpenses, tags]);
+  const monthBudgetTotal = useMemo(() => calculateBudgetTotal(monthExpenses, tags), [monthExpenses, tags]);
 
   const isTodayDate = isToday(currentDate);
 
@@ -111,7 +115,7 @@ export function DailyView({ friendUid, isViewingFriend }: DailyViewProps) {
       />
 
       <main className="p-4 space-y-4">
-        <BudgetIndicator spent={weekTotal} />
+        <BudgetIndicator spent={weekBudgetTotal} />
 
         <section>
           <div className="flex justify-between items-center mb-3">
@@ -146,9 +150,9 @@ export function DailyView({ friendUid, isViewingFriend }: DailyViewProps) {
         </section>
 
         <section className="bg-gray-800 rounded-lg p-4 border border-gray-700">
-          <WeekSummary total={weekTotal} compact />
+          <WeekSummary total={weekBudgetTotal} compact />
           <div className="border-t border-gray-700 my-2" />
-          <MonthSummary total={monthTotal} compact />
+          <MonthSummary total={monthBudgetTotal} compact />
         </section>
       </main>
 

@@ -24,6 +24,7 @@ export function SettingsPage() {
   const [editingTagId, setEditingTagId] = useState<string | null>(null);
   const [editingTagName, setEditingTagName] = useState('');
   const [editingTagColor, setEditingTagColor] = useState('');
+  const [editingTagFreeSpend, setEditingTagFreeSpend] = useState(false);
   const [deletingTagId, setDeletingTagId] = useState<string | null>(null);
 
   const handleSave = async () => {
@@ -51,6 +52,7 @@ export function SettingsPage() {
       setEditingTagId(tagId);
       setEditingTagName(tag.name);
       setEditingTagColor(tag.color);
+      setEditingTagFreeSpend(tag.freeSpend ?? false);
     }
   };
 
@@ -58,6 +60,7 @@ export function SettingsPage() {
     setEditingTagId(null);
     setEditingTagName('');
     setEditingTagColor('');
+    setEditingTagFreeSpend(false);
   };
 
   const saveTagChanges = async () => {
@@ -67,6 +70,7 @@ export function SettingsPage() {
       await updateTag(editingTagId, {
         name: editingTagName.trim(),
         color: editingTagColor,
+        freeSpend: editingTagFreeSpend,
       });
       cancelEditingTag();
     } catch (err) {
@@ -246,6 +250,19 @@ export function SettingsPage() {
                           })}
                         </div>
                       </div>
+                      <div>
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={editingTagFreeSpend}
+                            onChange={(e) => setEditingTagFreeSpend(e.target.checked)}
+                            className="w-4 h-4 rounded accent-green-500"
+                          />
+                          <span className="text-xs text-gray-300">
+                            Free Spend — exclude from weekly &amp; monthly totals
+                          </span>
+                        </label>
+                      </div>
                       <div className="flex items-center justify-end gap-2 pt-2">
                         <button
                           onClick={cancelEditingTag}
@@ -276,6 +293,11 @@ export function SettingsPage() {
                         style={{ backgroundColor: hexColor }}
                       />
                       <span className="text-sm text-gray-200">{tag.name}</span>
+                      {tag.freeSpend && (
+                        <span className="text-xs px-1.5 py-0.5 bg-green-900/50 text-green-400 border border-green-800 rounded">
+                          free spend
+                        </span>
+                      )}
                     </div>
                     <div className="flex items-center gap-1">
                       <button

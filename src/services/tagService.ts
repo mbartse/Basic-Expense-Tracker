@@ -47,7 +47,7 @@ export async function addTag(userId: string, name: string): Promise<string> {
 export async function updateTag(
   userId: string,
   tagId: string,
-  updates: { name?: string; color?: string }
+  updates: { name?: string; color?: string; freeSpend?: boolean }
 ): Promise<void> {
   const tagRef = doc(db, 'users', userId, 'tags', tagId);
   await updateDoc(tagRef, updates);

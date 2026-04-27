@@ -10,7 +10,7 @@ import {
   updateDoc,
 } from 'firebase/firestore';
 import { db } from './firebase';
-import type { Expense, ExpenseInput } from '../types/expense';
+import type { Expense, ExpenseInput, Tag } from '../types/expense';
 import { getDateString, getWeekKey, getMonthKey } from '../utils/dateUtils';
 import { updateTagLastUsed } from './tagService';
 
@@ -212,4 +212,16 @@ export function subscribeToDateRangeExpenses(
  */
 export function calculateTotal(expenses: Expense[]): number {
   return expenses.reduce((sum, expense) => sum + expense.amount, 0);
+}
+
+/**
+ * Calculate total excluding expenses tagged with Free Spend tags (in cents)
+ */
+export function calculateBudgetTotal(expenses: Expense[], tags: Tag[]): number {
+  const freeSpendTagIds = new Set(tags.filter(t => t.freeSpend).map(t => t.id));
+  if (freeSpendTagIds.size === 0) return calculateTotal(expenses);
+  return expenses.reduce((sum, expense) => {
+    const isFreeSpend = expense.tagIds?.some(id => freeSpendTagIds.has(id));
+    return isFreeSpend ? sum : sum + expense.amount;
+  }, 0);
 }

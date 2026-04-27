@@ -37,7 +37,7 @@ export function useTags(overrideUserId?: string) {
     return await addTagService(user.uid, name);
   }, [user]);
 
-  const updateTag = useCallback(async (tagId: string, updates: { name?: string; color?: string }) => {
+  const updateTag = useCallback(async (tagId: string, updates: { name?: string; color?: string; freeSpend?: boolean }) => {
     if (!user) {
       throw new Error('Must be logged in to update tags');
     }

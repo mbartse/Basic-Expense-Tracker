@@ -20,7 +20,7 @@ import {
   isToday,
   getWeekKey,
 } from '../utils/dateUtils';
-import { calculateTotal } from '../services/expenseService';
+import { calculateTotal, calculateBudgetTotal } from '../services/expenseService';
 
 interface MonthlyViewProps {
   friendUid?: string;
@@ -39,10 +39,16 @@ export function MonthlyView({ friendUid, isViewingFriend }: MonthlyViewProps) {
   const { tags } = useTags(friendUid);
   const { settings } = useSettings();
 
+  const budgetTotal = useMemo(() => calculateBudgetTotal(expenses, tags), [expenses, tags]);
+
   const days = useMemo(() => getDaysInMonth(monthStart), [monthStart]);
 
   const weeklyBreakdown = useMemo(() => {
+    const freeSpendTagIds = new Set(tags.filter(t => t.freeSpend).map(t => t.id));
     return expenses.reduce((acc, expense) => {
+      if (freeSpendTagIds.size > 0 && expense.tagIds?.some(id => freeSpendTagIds.has(id))) {
+        return acc;
+      }
       const weekKey = getWeekKey(expense.date.toDate(), settings.weekStartDay);
       if (!acc[weekKey]) {
         acc[weekKey] = 0;
@@ -50,7 +56,7 @@ export function MonthlyView({ friendUid, isViewingFriend }: MonthlyViewProps) {
       acc[weekKey] += expense.amount;
       return acc;
     }, {} as Record<string, number>);
-  }, [expenses, settings.weekStartDay]);
+  }, [expenses, tags, settings.weekStartDay]);
 
   const weeksInMonth = useMemo(() => {
     return [...new Set(days.map((day) => getWeekKey(day, settings.weekStartDay)))];
@@ -137,7 +143,7 @@ export function MonthlyView({ friendUid, isViewingFriend }: MonthlyViewProps) {
           <div className="flex justify-between items-center">
             <span className="text-gray-400">Month Total</span>
             <span className="text-2xl font-bold text-gray-100">
-              {formatCurrency(total)}
+              {formatCurrency(budgetTotal)}
             </span>
           </div>
 
